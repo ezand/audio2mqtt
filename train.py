@@ -21,29 +21,31 @@ def extract_embeddings_from_dataset(yamnet_model, dataset):
     Returns:
         Dataset of (embedding, label) pairs.
     """
-    def extract_embedding_batch(waveforms, labels):
-        embeddings_list = []
+    all_embeddings = []
+    all_labels = []
 
-        for waveform in waveforms:
+    # Process dataset eagerly
+    for waveforms, labels in dataset:
+        # Process each waveform in the batch
+        for i in range(waveforms.shape[0]):
+            waveform = waveforms[i]
+            label = labels[i]
+
+            # Extract embeddings for this waveform
             embeddings = extract_embeddings(yamnet_model, waveform)
-            embeddings_list.append(embeddings)
 
-        # Concatenate all embeddings
-        all_embeddings = tf.concat(embeddings_list, axis=0)
+            # Store all embedding frames with repeated labels
+            num_frames = embeddings.shape[0]
+            all_embeddings.append(embeddings)
+            all_labels.extend([label.numpy()] * num_frames)
 
-        # Repeat labels to match number of embeddings
-        num_embeddings = tf.shape(all_embeddings)[0]
-        repeated_labels = tf.repeat(labels, [tf.shape(emb)[0] for emb in embeddings_list])
+    # Concatenate all embeddings
+    all_embeddings = tf.concat(all_embeddings, axis=0)
+    all_labels = tf.constant(all_labels, dtype=tf.int32)
 
-        return all_embeddings, repeated_labels
-
-    embeddings_dataset = dataset.map(
-        extract_embedding_batch,
-        num_parallel_calls=tf.data.AUTOTUNE
-    )
-
-    # Unbatch and rebatch for training
-    embeddings_dataset = embeddings_dataset.unbatch()
+    # Create new dataset from embeddings
+    embeddings_dataset = tf.data.Dataset.from_tensor_slices((all_embeddings, all_labels))
+    embeddings_dataset = embeddings_dataset.shuffle(1000)
     embeddings_dataset = embeddings_dataset.batch(32)
     embeddings_dataset = embeddings_dataset.prefetch(tf.data.AUTOTUNE)
 
@@ -96,7 +98,7 @@ def train(training_dir: str = 'training',
     output_path.mkdir(exist_ok=True)
 
     # Save classifier
-    classifier_path = output_path / 'classifier'
+    classifier_path = output_path / 'classifier.keras'
     print(f"\nSaving classifier to {classifier_path}...")
     classifier.save(classifier_path)
 

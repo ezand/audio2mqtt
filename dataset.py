@@ -46,15 +46,19 @@ def scan_training_directory(training_dir: str) -> Tuple[List[str], List[str], Li
     return file_paths, labels, class_names
 
 
-def load_wav_16k_mono(filename: str) -> tf.Tensor:
+def load_wav_16k_mono(filename) -> tf.Tensor:
     """Load a WAV file and ensure it's 16kHz mono.
 
     Args:
-        filename: Path to WAV file.
+        filename: Path to WAV file (str or tensor).
 
     Returns:
         Normalized waveform tensor in range [-1.0, 1.0].
     """
+    # Convert tensor to string if needed
+    if isinstance(filename, tf.Tensor):
+        filename = filename.numpy().decode('utf-8')
+
     sample_rate, wav_data = wavfile.read(filename)
     sample_rate, wav_data = ensure_sample_rate(sample_rate, wav_data)
 
@@ -101,7 +105,13 @@ def create_dataset(training_dir: str,
         return waveform, label
 
     dataset = dataset.map(load_audio_with_label, num_parallel_calls=tf.data.AUTOTUNE)
-    dataset = dataset.batch(batch_size)
+
+    # Use padded_batch to handle variable-length audio
+    dataset = dataset.padded_batch(
+        batch_size,
+        padded_shapes=([None], []),
+        padding_values=(0.0, 0)
+    )
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
     return dataset, class_names

@@ -17,7 +17,7 @@ from yamnet_classifier import (
 
 
 def classify_with_custom_model(wav_file: str,
-                               classifier_path: str = 'models/classifier',
+                               classifier_path: str = 'models/classifier.keras',
                                class_names_path: str = 'models/class_names.txt') -> None:
     """Classify audio using custom trained model.
 
