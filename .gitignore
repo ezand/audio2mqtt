@@ -4,6 +4,9 @@ venv/
 ENV/
 env/
 
+# Development
+test_sounds/
+
 # Python
 __pycache__/
 *.py[cod]
