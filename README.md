@@ -1,6 +1,14 @@
 ![Banner](docs/assets/audio2mqtt_banner.png)
 
-# Audio Classification with YAMNet Transfer Learning
+[![GitHub License](https://img.shields.io/github/license/ezand/launchbox2mqtt)](https://choosealicense.com/licenses/mit/)
+![GitHub top language](https://img.shields.io/github/languages/top/ezand/audio2mqtt)
+
+> ⚠️ **Work in Progress**: This project is under active development and not ready for production use. Features may be
+> incomplete, APIs may change, and bugs are expected.
+
+# audio2mqtt
+
+**Audio Classification with YAMNet Transfer Learning**
 
 A custom audio classification system built on Google's YAMNet model using transfer learning.
 
