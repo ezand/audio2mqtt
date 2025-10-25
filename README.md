@@ -203,3 +203,9 @@ Transfer learning with YAMNet requires:
 - **Inference**: ~100ms per audio file on CPU
 - **Training**: ~1-2 minutes for 20 samples on CPU
 - **Model size**: ~5MB (classifier only, YAMNet not included)
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025 Eirik Sand
