@@ -1,3 +1,5 @@
+![Banner](docs/assets/audio2mqtt_banner.png)
+
 # Audio Classification with YAMNet Transfer Learning
 
 A custom audio classification system built on Google's YAMNet model using transfer learning.
