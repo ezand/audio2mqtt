@@ -168,14 +168,18 @@ class FingerprintEngine:
             song_name = results.get('song_name', '')
             class_name = song_name.split('_')[0] if '_' in song_name else song_name
 
+            # Dejavu returns 'confidence' as number of matched hashes (not a 0-1 score)
+            # We use this directly as our confidence metric
+            matched_hashes = results.get('confidence', 0)
+
             result = {
                 'class': class_name,
                 'song_name': song_name,
-                'confidence': results.get('input_confidence', 0.0),
+                'confidence': matched_hashes,  # Use match count as confidence
                 'offset': results.get('offset_seconds', 0),
-                'input_total_hashes': results.get('input_total_hashes', 0),
-                'fingerprinted_hashes_in_db': results.get('fingerprinted_hashes_in_db', 0),
-                'hashes_matched_in_input': results.get('hashes_matched_in_input', 0)
+                'input_total_hashes': matched_hashes,  # Dejavu doesn't provide this
+                'fingerprinted_hashes_in_db': matched_hashes,
+                'hashes_matched_in_input': matched_hashes
             }
 
             # Add metadata if requested

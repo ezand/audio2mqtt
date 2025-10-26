@@ -254,10 +254,12 @@ class PostgreSQLDatabase(Database):
         hash_values = [h for h, _ in hashes]
         hash_dict = {h: offset for h, offset in hashes}
 
-        # Debug: log first few hashes
+        # Debug logging (disabled by default)
         import os
         if os.environ.get('DEBUG_FINGERPRINT'):
-            print(f"[DEBUG] Querying {len(hash_values)} hashes, first 3: {hash_values[:3]}")
+            print(f"[DEBUG] return_matches() called with {len(hash_values)} hashes")
+            if len(hash_values) > 0:
+                print(f"[DEBUG] First 3 hashes: {hash_values[:3]}")
 
         # Query database (manual expansion for IN clause)
         with self.cursor() as cur:
@@ -271,11 +273,24 @@ class PostgreSQLDatabase(Database):
             cur.execute(query, hash_values)
 
             matches = []
+            row_count = 0
             for row in cur:
+                row_count += 1
                 # Get hash, song_id, db_offset from result
-                hash_hex = row[0].hex() if isinstance(row[0], bytes) else row[0]
+                # Handle memoryview from psycopg2
+                if isinstance(row[0], memoryview):
+                    hash_hex = row[0].tobytes().hex()
+                elif isinstance(row[0], bytes):
+                    hash_hex = row[0].hex()
+                else:
+                    hash_hex = row[0]
                 song_id = row[1]
                 db_offset = row[2]
+
+                # Debug first row
+                if row_count == 1 and os.environ.get('DEBUG_FINGERPRINT'):
+                    print(f"[DEBUG] First DB row: hash_hex={hash_hex}, type={type(hash_hex)}, in_dict={hash_hex in hash_dict}")
+                    print(f"[DEBUG] First query hash: {list(hash_dict.keys())[0]}, type={type(list(hash_dict.keys())[0])}")
 
                 # Calculate offset difference
                 if hash_hex in hash_dict:
@@ -284,7 +299,7 @@ class PostgreSQLDatabase(Database):
                     matches.append((song_id, offset_diff))
 
             if os.environ.get('DEBUG_FINGERPRINT'):
-                print(f"[DEBUG] Found {len(matches)} matches")
+                print(f"[DEBUG] Query returned {row_count} rows, extracted {len(matches)} matches")
 
             return matches
 
