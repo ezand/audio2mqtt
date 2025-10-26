@@ -6,6 +6,8 @@ env/
 
 # Development
 source_sounds/
+dev-config.yaml
+.data
 
 # Python
 __pycache__/

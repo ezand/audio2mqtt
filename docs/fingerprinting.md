@@ -58,15 +58,24 @@ The fingerprinting workflow uses **YAML metadata files** for flexible metadata a
 
 ### Database Setup
 
-**In-Memory Database (recommended for current PyDejavu version)**
+**Option 1: PostgreSQL (recommended for production)**
+
+Start PostgreSQL database:
+```bash
+docker-compose up -d
+```
+
+Copy and configure settings:
+```bash
+cp config.yaml.example dev-config.yaml
+# Edit dev-config.yaml with your database credentials (defaults should work)
+```
+
+**Option 2: In-Memory Database (development/testing)**
 
 No setup needed, just use `--db-type memory`. Note: fingerprints and metadata are lost when process exits. Re-import JSON files on restart.
 
-**PostgreSQL/MySQL (requires additional setup)**
-
-PyDejavu 0.1.3 only ships with MySQL support. To use PostgreSQL, you would need to:
-1. Implement a PostgreSQL database adapter (similar to `fingerprinting/memory_db.py`)
-2. Or use MySQL instead via docker-compose
+**Note**: This project includes a custom PostgreSQL adapter (`fingerprinting/postgres_db.py`) since PyDejavu 0.1.3 only ships with MySQL support.
 
 ### Configuration File
 
@@ -164,11 +173,14 @@ git commit -m "Add fingerprints for Super Mario World music"
 Import JSON fingerprint files into database (no audio files needed):
 
 ```bash
-# Import all fingerprints from directory (in-memory)
+# Import with PostgreSQL (persistent)
+python import_fingerprint_files.py training/fingerprints/ --config dev-config.yaml
+
+# Import with in-memory database (development)
 python import_fingerprint_files.py training/fingerprints/ --db-type memory
 
 # Import single file
-python import_fingerprint_files.py training/fingerprints/song.json --db-type memory
+python import_fingerprint_files.py training/fingerprints/song.json --config dev-config.yaml
 ```
 
 **What this does:**
@@ -184,8 +196,7 @@ python import_fingerprint_files.py training/fingerprints/song.json --db-type mem
 - ✅ Fast import (no re-fingerprinting)
 - ✅ Team members can clone repo and import without source audio
 - ✅ Reproducible - same JSON = same database state
-
-**Note**: PyDejavu 0.1.3 only supports MySQL/in-memory databases. PostgreSQL support requires implementing a PostgreSQL database adapter. Use `--db-type memory` for development/testing.
+- ✅ PostgreSQL support via custom adapter (`fingerprinting/postgres_db.py`)
 
 ## Legacy Registration (Without Metadata)
 

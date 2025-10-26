@@ -71,13 +71,14 @@ python listen.py --method fingerprint --config config.yaml
 python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
 
 # 2. Import fingerprints into database (no audio files needed)
-python import_fingerprint_files.py training/fingerprints/ --db-type memory
 
-# Or use in-memory for development (data not persisted)
+# PostgreSQL (persistent, recommended for production)
+docker-compose up -d
+python import_fingerprint_files.py training/fingerprints/ --config dev-config.yaml
+
+# In-memory (development, data not persisted)
 python import_fingerprint_files.py training/fingerprints/ --db-type memory
 ```
-
-**Note**: PostgreSQL/MySQL support requires additional database adapters not included in base PyDejavu. Use `--db-type memory` for testing without persistence, or implement a PostgreSQL adapter for production use.
 
 ### Register Fingerprints (Legacy)
 ```bash
@@ -164,10 +165,12 @@ Audio Input → Ring Buffer → Sliding Window → FFT + Peak Detection → Hash
 - **fingerprinting/engine.py**: Dejavu wrapper with metadata support - initialize engine, register audio with metadata, recognize audio from buffers
 - **fingerprinting/metadata_db.py**: Metadata database manager - stores flexible JSONB metadata for songs (PostgreSQL/MySQL/SQLite)
 - **fingerprinting/storage_config.py**: Database configuration (PostgreSQL, MySQL, in-memory) with environment variable support
+- **fingerprinting/memory_db.py**: In-memory database adapter for Dejavu (no persistence)
+- **fingerprinting/postgres_db.py**: PostgreSQL database adapter for Dejavu (custom implementation)
 - **fingerprinting/recognizer.py**: Real-time fingerprint recognition with metadata - ring buffer, energy gating, event debouncing (mirrors StreamClassifier interface)
 - **register_fingerprints.py**: CLI for registering audio fingerprints by class or flat directory structure (legacy, no metadata)
 - **generate_fingerprint_files.py**: Generate fingerprint JSON files from YAML metadata + audio (for version control)
-- **import_fingerprint_files.py**: Import fingerprint JSON files into database with metadata
+- **import_fingerprint_files.py**: Import fingerprint JSON files into database with metadata (no audio files needed)
 
 **Shared Components:**
 - **audio_device.py**: Device discovery with auto-detection for loopback devices (BlackHole, WASAPI, monitor) and microphones

@@ -6,8 +6,9 @@ from typing import Dict, List, Optional, Union, Any
 
 import numpy as np
 
-# Import memory database BEFORE importing Dejavu to register it
+# Import database adapters BEFORE importing Dejavu to register them
 from .memory_db import MemoryDatabase  # noqa: F401
+from .postgres_db import PostgreSQLDatabase  # noqa: F401
 
 from dejavu import Dejavu
 from dejavu.recognize import FileRecognizer, MicrophoneRecognizer

@@ -14,6 +14,34 @@ from fingerprinting.engine import FingerprintEngine
 from fingerprinting.storage_config import DatabaseType
 
 
+def print_progress_bar(iteration: int, total: int, prefix: str = '', suffix: str = '',
+                       length: int = 40, fill: str = '█', end: str = '\r'):
+    """Print a progress bar to terminal.
+
+    Args:
+        iteration: Current iteration (0 to total).
+        total: Total iterations.
+        prefix: Prefix string.
+        suffix: Suffix string.
+        length: Character length of bar.
+        fill: Bar fill character.
+        end: End character (e.g. '\r', '\n').
+    """
+    if total == 0:
+        percent = 100.0
+        filled_length = length
+    else:
+        percent = 100 * (iteration / float(total))
+        filled_length = int(length * iteration // total)
+
+    bar = fill * filled_length + '░' * (length - filled_length)
+    print(f'\r  {prefix} |{bar}| {percent:.1f}% {suffix}', end=end)
+
+    # Print newline on complete
+    if iteration == total:
+        print()
+
+
 def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
     """Import single fingerprint file into database.
 
@@ -78,13 +106,13 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
                 if hash_value is not None and offset is not None:
                     db.insert(hash_value, song_id, offset)
 
-            # Progress indicator
+            # Visual progress bar with count
             progress = min(i + batch_size, len(fingerprints))
-            if len(fingerprints) > batch_size:
-                print(f"    Progress: {progress:,}/{len(fingerprints):,}", end='\r')
+            count_str = f'{progress:,}/{len(fingerprints):,}'
+            print_progress_bar(progress, len(fingerprints), prefix=f'  Progress {count_str}', suffix='')
 
-        if len(fingerprints) > batch_size:
-            print()  # Newline after progress
+        # Final newline
+        print()
 
         # Mark song as fingerprinted
         db.set_song_fingerprinted(song_id)
@@ -220,8 +248,12 @@ Notes:
 
     # Process each JSON file
     results = []
-    for json_file in json_files:
-        print(f"Processing: {json_file.name}")
+    total_files = len(json_files)
+
+    for idx, json_file in enumerate(json_files, start=1):
+        # File progress header
+        print(f"\n[{idx}/{total_files}] Processing: {json_file.name}")
+
         result = import_fingerprint_file(json_file, engine)
         results.append(result)
 
@@ -234,7 +266,6 @@ Notes:
             print(f"  → Skipped: {result['song_name']} ({result['reason']})")
         else:
             print(f"  ✗ Error: {result['error']}")
-        print()
 
     # Summary
     success_count = sum(1 for r in results if r['status'] == 'success')
