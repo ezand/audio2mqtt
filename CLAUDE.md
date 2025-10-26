@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Audio classification system using YAMNet transfer learning. YAMNet (pre-trained on AudioSet) is used as a frozen feature extractor, outputting 1,024-dimensional embeddings. A small custom classifier is trained on these embeddings to recognize custom audio classes.
+Custom audio classification system using YAMNet transfer learning. Records audio in real-time (system audio via loopback or microphone), classifies using trained model, outputs events to console.
+
+YAMNet (pre-trained on AudioSet) is used as a frozen feature extractor, outputting 1,024-dimensional embeddings. A small custom classifier is trained on these embeddings to recognize custom audio classes.
 
 ## Commands
 
@@ -12,9 +14,9 @@ Audio classification system using YAMNet transfer learning. YAMNet (pre-trained 
 ```bash
 python train.py [training_dir] [output_dir]
 ```
-Trains a custom classifier on audio files in `training/` directory. Folder names become class labels. Outputs to `models/classifier/` and `models/class_names.txt`.
+Trains a custom classifier on audio files in `training/` directory. Folder names become class labels. Outputs to `models/classifier.keras` and `models/class_names.txt`.
 
-### Classification
+### Batch Classification
 ```bash
 # Base YAMNet (521 AudioSet classes)
 python main.py <wav_file>
@@ -23,32 +25,64 @@ python main.py <wav_file>
 python main.py <wav_file> --custom
 ```
 
+### Real-time Listening
+```bash
+# List available audio devices
+python listen.py --list
+
+# Auto-select loopback device (system audio)
+python listen.py
+
+# Listen to microphone
+python listen.py --microphone
+
+# Adjust thresholds and enable verbose mode
+python listen.py --threshold 0.8 --energy-threshold -35 --verbose
+```
+
 ### Audio Conversion
 ```bash
 python audio_util.py convert <input_dir> <output_dir>
 ```
-Converts WAV files to YAMNet-compatible format (16kHz mono).
+Converts audio files (WAV, MP3, M4A, OGG, FLAC, AAC, WMA) to YAMNet-compatible format (16kHz mono).
 
 ## Architecture
 
 ### Two-Stage Pipeline
-1. **Feature Extraction (YAMNet)**: Audio → 1024-dim embeddings per frame
+1. **Feature Extraction (YAMNet)**: Audio → 1024-dim embeddings per frame (~0.48s)
 2. **Classification (Custom)**: Embeddings → class predictions
+
+### Real-time Streaming Pipeline
+```
+Audio Input (loopback/mic) → Ring Buffer (3s history) → Sliding Window (2s)
+→ YAMNet Embeddings → Classifier → Per-frame Predictions → Debouncing → Events
+```
 
 ### Key Design Pattern
 - YAMNet is **never retrained**, only used for feature extraction
-- Training data is processed through YAMNet to extract embeddings **once**, then embeddings are cached in the TensorFlow dataset
+- Training data is processed through YAMNet to extract embeddings **once** in `train.py:extract_embeddings_from_dataset()`
 - The custom classifier trains on pre-computed embeddings, not raw audio
 - This separation is critical: `dataset.py` handles audio loading, `model.py` handles embedding extraction, `train.py` orchestrates the pipeline
 
 ### Module Responsibilities
-- **yamnet_classifier.py**: YAMNet model loading and inference utilities
-- **class_map.py**: Load YAMNet's 521 class names from CSV
-- **audio_util.py**: Audio preprocessing (mono conversion, resampling to 16kHz)
-- **dataset.py**: Scan `training/` directory structure, load WAV files, create TF datasets
-- **model.py**: Build classifier architecture, extract embeddings, prediction functions
-- **train.py**: Training loop - loads data, extracts embeddings, trains classifier, saves model
-- **main.py**: CLI for classification with base YAMNet or custom model
+
+**Core Inference:**
+- **yamnet_classifier.py**: YAMNet model loading, audio loading, normalization, batch classification
+- **class_map.py**: Load YAMNet's 521 AudioSet class names from CSV
+
+**Training:**
+- **audio_util.py**: Audio preprocessing (mono conversion, resampling to 16kHz, multi-format support)
+- **dataset.py**: Scan `training/` directory, load WAV files, create TF datasets. Uses `padded_batch()` for variable-length audio
+- **model.py**: Build classifier architecture, extract embeddings, prediction functions (batch and streaming)
+- **train.py**: Training loop - loads data, extracts embeddings eagerly (not in graph), trains classifier, saves model
+
+**Real-time Streaming:**
+- **audio_device.py**: Device discovery with auto-detection for loopback devices (BlackHole, WASAPI, monitor) and microphones
+- **stream_classifier.py**: Real-time classification engine with ring buffer, energy gating, event debouncing
+- **listen.py**: CLI entry point for real-time listening
+
+**Batch Classification:**
+- **main.py**: CLI for batch classification with base YAMNet or custom model
 
 ### Training Data Structure
 ```
@@ -61,13 +95,78 @@ training/
 ```
 Folder name = class label. `dataset.scan_training_directory()` automatically discovers classes.
 
+**Critical**: Train with ≥2 classes. Single-class training causes softmax to always output 100% confidence regardless of input.
+
 ### Embedding Extraction Strategy
-Each audio file generates multiple embedding frames (one per ~1 second). During training, all frames are used (data augmentation effect). During inference, embeddings are averaged across time to produce a single prediction per file. This is handled in `model.extract_embeddings()` and `model.predict_class()`.
+
+**Batch Inference** (`model.predict_batch()`):
+- Each audio file generates multiple embedding frames (one per ~0.48s)
+- Embeddings are **averaged across time** to produce single prediction per file
+- Used in `main.py` for batch classification
+
+**Streaming Inference** (`model.predict_streaming()`):
+- Each embedding frame classified **separately** (no averaging)
+- Detects events within continuous audio stream
+- Used in `stream_classifier.py` for real-time classification
+
+**Training**:
+- All frames from all files used (data augmentation effect)
+- Extracted eagerly in `train.py:extract_embeddings_from_dataset()` to avoid TensorFlow graph scope errors
+
+## Critical Implementation Details
+
+### Energy Gating (stream_classifier.py:69-87)
+RMS energy calculation in dB filters silence/noise before inference:
+```python
+rms = np.sqrt(np.mean(audio**2))
+db = 20 * np.log10(rms) if rms > 1e-10 else -100.0
+```
+Skips inference if below threshold (default -40dB). Significantly reduces false positives and CPU usage.
+
+### TensorFlow Scope Issue (Solved)
+**Problem**: Using Python loops inside graph functions causes `InaccessibleTensorError`.
+**Solution**: Extract embeddings eagerly in `train.py:extract_embeddings_from_dataset()`, then create new dataset from extracted embeddings.
+
+### Variable-Length Audio (Solved)
+**Problem**: Regular `batch()` requires same shape, audio files have different lengths.
+**Solution**: Use `padded_batch()` with padding values in `dataset.py`.
+
+### Tensor to String Conversion (Solved)
+**Problem**: `tf.py_function` passes TensorFlow tensor to `load_wav_16k_mono()`, but `wavfile.read()` expects string.
+**Solution**: Check `isinstance(filename, tf.Tensor)` and convert with `.numpy().decode('utf-8')` in `dataset.py:20-22`.
+
+### Model Save Format
+Always use `.keras` extension: `models/classifier.keras` (not `models/classifier`).
+
+### Streaming vs Batch Inference
+- **Batch**: Averages embeddings across time → single prediction per file
+- **Streaming**: Classifies each frame separately → detects events within continuous audio
+
+### Single-Class Training Problem
+**Critical limitation**: Training with only 1 class causes softmax to always output 100% confidence regardless of input audio. Model needs ≥2 classes (target + background/negative samples) to learn discrimination. This is a fundamental ML requirement, not a bug.
+
+**Solutions**:
+1. Add `training/background/` folder with 20+ non-target sounds
+2. Implement YAMNet pre-filtering to skip custom classifier on clearly wrong audio
+3. Add validation warning in `train.py` when detecting single-class training
+
+## Audio Setup
+
+### macOS
+Install [BlackHole](https://github.com/ExistentialAudio/BlackHole) 2ch, create Multi-Output Device in Audio MIDI Setup combining speakers + BlackHole, set system output to Multi-Output Device.
+
+### Windows
+Enable "Stereo Mix" in audio settings or install VB-CABLE.
+
+### Linux
+Use PulseAudio monitor (usually built-in).
 
 ## Dependencies
 
-Core: TensorFlow 2.20, TensorFlow Hub, TensorFlow I/O, scipy, numpy
-See `requirements.txt` for versions.
+Core: TensorFlow 2.20, TensorFlow Hub, TensorFlow I/O, soundcard 0.4.5, scipy, numpy
+Optional: pydub 0.25.1 (multi-format conversion requires ffmpeg)
+
+See `requirements.txt` for exact versions.
 
 ## Code Style
 
