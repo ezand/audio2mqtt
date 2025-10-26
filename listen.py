@@ -1,79 +1,46 @@
-"""Real-time audio classification listener CLI."""
+"""Real-time audio fingerprinting listener CLI."""
 
 import argparse
 import sys
 from pathlib import Path
 
-import tensorflow as tf
-
 from audio_device import list_audio_devices, print_devices, select_device
-from stream_classifier import start_listening as start_listening_ml
-from yamnet_classifier import load_yamnet_model
 from fingerprinting.engine import FingerprintEngine
 from fingerprinting.storage_config import DatabaseType, load_recognition_config
-from fingerprinting.recognizer import start_listening as start_listening_fingerprint
-
-
-def load_custom_model(model_path: str, class_names_path: str):
-    """Load custom trained model and class names.
-
-    Args:
-        model_path: Path to classifier model (.keras file).
-        class_names_path: Path to class names file.
-
-    Returns:
-        Tuple of (classifier, class_names).
-    """
-    if not Path(model_path).exists():
-        print(f"Error: Model not found at {model_path}")
-        print("Train a model first using: python train.py")
-        sys.exit(1)
-
-    if not Path(class_names_path).exists():
-        print(f"Error: Class names file not found at {class_names_path}")
-        sys.exit(1)
-
-    print(f"Loading model from {model_path}...")
-    classifier = tf.keras.models.load_model(model_path)
-
-    with open(class_names_path, 'r') as f:
-        class_names = [line.strip() for line in f.readlines()]
-
-    print(f"Loaded {len(class_names)} classes: {class_names}")
-
-    return classifier, class_names
+from fingerprinting.recognizer import start_listening
 
 
 def main():
     """Main entry point for audio listener."""
     parser = argparse.ArgumentParser(
-        description='Real-time audio recognition using ML or fingerprinting',
+        description='Real-time audio recognition using fingerprinting',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # List available audio devices
   python listen.py --list
 
-  # Use ML method (default)
+  # Use in-memory database (quick start)
   python listen.py
 
-  # Use fingerprinting method
-  python listen.py --method fingerprint
+  # Use PostgreSQL database
+  python listen.py --db-type postgresql
 
-  # Fingerprinting with PostgreSQL database
-  python listen.py --method fingerprint --db-type postgresql
-
-  # Fingerprinting with custom config
-  python listen.py --method fingerprint --config config.yaml
+  # Use custom config file
+  python listen.py --config config.yaml
 
   # Listen to microphone instead of system audio
   python listen.py --microphone
 
-  # Select specific device with fingerprinting
-  python listen.py --method fingerprint --device "BlackHole" --verbose
+  # Select specific device
+  python listen.py --device "BlackHole" --verbose
 
-Note: For fingerprinting, register audio first:
-  python register_fingerprints.py training/ --by-class
+Note: Register audio first using:
+  # Generate fingerprints from YAML metadata
+  python generate_fingerprint_files.py source_sounds/ training/fingerprints/
+
+  # Import into database
+  python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
         """
     )
 
@@ -84,17 +51,9 @@ Note: For fingerprinting, register audio first:
     )
 
     parser.add_argument(
-        '--method',
-        type=str,
-        choices=['ml', 'fingerprint'],
-        default='ml',
-        help='Recognition method: ml (YAMNet transfer learning) or fingerprint (Dejavu) (default: ml)'
-    )
-
-    parser.add_argument(
         '--config',
         type=str,
-        help='Path to config file (for fingerprinting database configuration)'
+        help='Path to config file (for database configuration and recognition settings)'
     )
 
     parser.add_argument(
@@ -102,7 +61,7 @@ Note: For fingerprinting, register audio first:
         type=str,
         choices=['memory', 'postgresql', 'mysql'],
         default='memory',
-        help='Database type for fingerprinting (default: memory). Ignored if --config is provided.'
+        help='Database type (default: memory). Ignored if --config is provided.'
     )
 
     parser.add_argument(
@@ -118,24 +77,11 @@ Note: For fingerprinting, register audio first:
     )
 
     parser.add_argument(
-        '--model',
-        type=str,
-        default='models/classifier.keras',
-        help='Path to trained classifier model (default: models/classifier.keras)'
-    )
-
-    parser.add_argument(
-        '--classes',
-        type=str,
-        default='models/class_names.txt',
-        help='Path to class names file (default: models/class_names.txt)'
-    )
-
-    parser.add_argument(
         '--threshold',
         type=float,
-        default=0.7,
-        help='Confidence threshold for event detection (default: 0.7)'
+        default=0.5,
+        help='Confidence threshold for event detection (default: 0.5). '
+             'Confidence is calculated as min(matched_hashes / 50, 1.0).'
     )
 
     parser.add_argument(
@@ -149,8 +95,8 @@ Note: For fingerprinting, register audio first:
         '--window-duration',
         type=float,
         default=2.0,
-        help='Sliding window duration in seconds for classification (default: 2.0). '
-             'Should match your training audio length for best results.'
+        help='Sliding window duration in seconds for fingerprinting (default: 2.0). '
+             'Longer windows = higher accuracy but slower response.'
     )
 
     parser.add_argument(
@@ -197,99 +143,77 @@ Note: For fingerprinting, register audio first:
             print("Or remove --microphone flag to use loopback device.")
         sys.exit(1)
 
-    # Method-specific initialization and listening
-    if args.method == 'ml':
-        # ML method: Load YAMNet and classifier
-        print("\nMethod: ML (YAMNet transfer learning)")
-        print("Loading YAMNet model...")
-        yamnet_model = load_yamnet_model()
+    # Initialize fingerprint engine
+    print("\nMethod: Fingerprinting (Dejavu)")
 
-        print("Loading custom classifier...")
-        classifier, class_names = load_custom_model(args.model, args.classes)
+    # Parse database type
+    if args.db_type == 'memory':
+        db_type = DatabaseType.MEMORY
+    elif args.db_type == 'postgresql':
+        db_type = DatabaseType.POSTGRESQL
+    elif args.db_type == 'mysql':
+        db_type = DatabaseType.MYSQL
+    else:
+        db_type = DatabaseType.MEMORY
 
-        # Start listening with ML
-        start_listening_ml(
-            device=device,
-            yamnet_model=yamnet_model,
-            classifier=classifier,
-            class_names=class_names,
-            chunk_duration=args.chunk_duration,
-            window_duration=args.window_duration,
-            confidence_threshold=args.threshold,
-            energy_threshold_db=args.energy_threshold,
-            verbose=args.verbose
-        )
+    # Initialize engine and load config
+    try:
+        if args.config:
+            print(f"Loading config from: {args.config}")
+            if not Path(args.config).exists():
+                print(f"Error: Config file not found: {args.config}")
+                sys.exit(1)
+            engine = FingerprintEngine(config_path=args.config)
 
-    elif args.method == 'fingerprint':
-        # Fingerprinting method: Initialize engine
-        print("\nMethod: Fingerprinting (Dejavu)")
+            # Load recognition config from file
+            recognition_config = load_recognition_config(args.config)
 
-        # Parse database type
-        if args.db_type == 'memory':
-            db_type = DatabaseType.MEMORY
-        elif args.db_type == 'postgresql':
-            db_type = DatabaseType.POSTGRESQL
-        elif args.db_type == 'mysql':
-            db_type = DatabaseType.MYSQL
+            # Use config values if command-line args are defaults
+            # (user didn't explicitly override them)
+            parser_defaults = {
+                'threshold': 0.5,
+                'chunk_duration': 0.5,
+                'window_duration': 2.0,
+            }
+
+            confidence_threshold = recognition_config['confidence_threshold'] if args.threshold == parser_defaults['threshold'] else args.threshold
+            chunk_duration = recognition_config['chunk_seconds'] if args.chunk_duration == parser_defaults['chunk_duration'] else args.chunk_duration
+            window_duration = args.window_duration  # No config equivalent yet
         else:
-            db_type = DatabaseType.MEMORY
+            print(f"Using database type: {args.db_type}")
+            engine = FingerprintEngine(db_type=db_type)
+            confidence_threshold = args.threshold
+            chunk_duration = args.chunk_duration
+            window_duration = args.window_duration
+    except Exception as e:
+        print(f"Error initializing fingerprint engine: {e}")
+        print("\nIf using PostgreSQL/MySQL, make sure the database is running.")
+        print("You can start PostgreSQL with: docker-compose up -d")
+        sys.exit(1)
 
-        # Initialize engine and load config
-        try:
-            if args.config:
-                print(f"Loading config from: {args.config}")
-                if not Path(args.config).exists():
-                    print(f"Error: Config file not found: {args.config}")
-                    sys.exit(1)
-                engine = FingerprintEngine(config_path=args.config)
+    # Check if any fingerprints are registered
+    song_count = engine.get_song_count()
+    if song_count == 0:
+        print("\nWarning: No fingerprints registered in database!")
+        print("Register audio first:")
+        print("  1. Generate fingerprints: python generate_fingerprint_files.py source_sounds/ training/fingerprints/")
+        print("  2. Import into database: python import_fingerprint_files.py training/fingerprints/ --db-type postgresql")
+        response = input("\nContinue anyway? (yes/no): ")
+        if response.lower() != 'yes':
+            sys.exit(0)
+    else:
+        print(f"Found {song_count} registered fingerprints in database")
 
-                # Load recognition config from file
-                recognition_config = load_recognition_config(args.config)
-
-                # Use config values if command-line args are defaults
-                # (user didn't explicitly override them)
-                parser_defaults = {
-                    'threshold': 0.7,
-                    'chunk_duration': 0.5,
-                    'window_duration': 2.0,
-                }
-
-                confidence_threshold = recognition_config['confidence_threshold'] if args.threshold == parser_defaults['threshold'] else args.threshold
-                chunk_duration = recognition_config['chunk_seconds'] if args.chunk_duration == parser_defaults['chunk_duration'] else args.chunk_duration
-                window_duration = args.window_duration  # No config equivalent yet
-            else:
-                print(f"Using database type: {args.db_type}")
-                engine = FingerprintEngine(db_type=db_type)
-                confidence_threshold = args.threshold
-                chunk_duration = args.chunk_duration
-                window_duration = args.window_duration
-        except Exception as e:
-            print(f"Error initializing fingerprint engine: {e}")
-            print("\nIf using PostgreSQL/MySQL, make sure the database is running.")
-            print("You can start PostgreSQL with: docker-compose up -d")
-            sys.exit(1)
-
-        # Check if any fingerprints are registered
-        song_count = engine.get_song_count()
-        if song_count == 0:
-            print("\nWarning: No fingerprints registered in database!")
-            print("Register audio first: python register_fingerprints.py training/ --by-class")
-            response = input("Continue anyway? (yes/no): ")
-            if response.lower() != 'yes':
-                sys.exit(0)
-        else:
-            print(f"Found {song_count} registered fingerprints in database")
-
-        # Start listening with fingerprinting
-        start_listening_fingerprint(
-            device=device,
-            engine=engine,
-            chunk_duration=chunk_duration,
-            window_duration=window_duration,
-            confidence_threshold=confidence_threshold,
-            energy_threshold_db=args.energy_threshold,
-            verbose=args.verbose
-        )
+    # Start listening with fingerprinting
+    start_listening(
+        device=device,
+        engine=engine,
+        chunk_duration=chunk_duration,
+        window_duration=window_duration,
+        confidence_threshold=confidence_threshold,
+        energy_threshold_db=args.energy_threshold,
+        verbose=args.verbose
+    )
 
 
 if __name__ == "__main__":

@@ -224,13 +224,13 @@ python listen.py --energy-threshold -35
 **Examples:**
 ```bash
 # Detect game sounds
-python listen.py --method fingerprint
+python listen.py
 
 # Detect music/songs playing
-python listen.py --method fingerprint --window-duration 3.0
+python listen.py --window-duration 3.0
 
 # Detect system alerts
-python listen.py --method fingerprint --threshold 0.4
+python listen.py --threshold 0.4
 ```
 
 ### Microphone
@@ -243,11 +243,11 @@ python listen.py --method fingerprint --threshold 0.4
 
 **Examples:**
 ```bash
-# Detect environmental sounds
-python listen.py --microphone --method ml
+# Detect specific sounds with microphone
+python listen.py --microphone
 
 # Voice commands
-python listen.py --microphone --threshold 0.8
+python listen.py --microphone --threshold 0.5
 
 # Quiet ambient sounds
 python listen.py --microphone --energy-threshold -50
@@ -255,17 +255,17 @@ python listen.py --microphone --energy-threshold -50
 
 ## Audio Format Requirements
 
-Both methods expect **16kHz mono audio** internally:
+Fingerprinting expects **44.1kHz audio** internally:
 
-- **Sample rate**: 16,000 Hz (16kHz)
-- **Channels**: Mono (1 channel)
+- **Sample rate**: 44,100 Hz (44.1kHz, CD quality)
+- **Channels**: Mono or stereo (Dejavu handles both)
 - **Bit depth**: 16-bit (standard WAV format)
 
 **Automatic conversion:**
-- `audio_util.py` handles conversion automatically
-- Stereo is downmixed to mono
-- Sample rate is resampled to 16kHz
-- Non-WAV formats supported with `pydub` + `ffmpeg`
+- Dejavu handles audio preprocessing automatically
+- Stereo is processed as-is (no downmixing needed)
+- Sample rate conversion handled by librosa
+- Non-WAV formats supported with librosa
 
 ## Performance Considerations
 
@@ -302,6 +302,4 @@ python listen.py --window-duration 1.0
 
 Once audio devices are set up:
 
-1. **ML Method**: See [docs/ml.md](ml.md) for training and real-time classification
-2. **Fingerprinting Method**: See [docs/fingerprinting.md](fingerprinting.md) for registration and recognition
-3. **Utilities**: See [docs/utilities.md](utilities.md) for audio conversion and background generation
+- **Fingerprinting Guide**: See [docs/fingerprinting.md](fingerprinting.md) for complete setup, registration, and recognition instructions

@@ -332,7 +332,7 @@ def main():
         print("✓ All patches applied successfully!")
         print()
         print("You can now use fingerprinting:")
-        print("  python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/")
+        print("  python generate_fingerprint_files.py source_sounds/ training/fingerprints/")
     else:
         print("❌ Patching failed")
         print()

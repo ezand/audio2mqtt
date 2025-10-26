@@ -8,165 +8,104 @@
 
 # audio2mqtt
 
-**Real-time Audio Recognition: ML & Fingerprinting**
+**Real-time Audio Fingerprinting Recognition**
 
-A dual-method audio recognition system for detecting audio events in real-time:
-- **ML Method**: YAMNet transfer learning for sound pattern recognition and generalization
-- **Fingerprinting Method**: Dejavu-based exact audio matching (like Shazam)
+Audio fingerprinting system for detecting specific audio events in real-time using Dejavu (like Shazam).
 
 ## Overview
 
-### Two Recognition Methods
+This system uses audio fingerprinting to create unique "signatures" for exact audio matching:
 
-This system provides two distinct approaches for audio recognition, each optimized for different use cases:
-
-#### ML Method: YAMNet Transfer Learning
-
-Uses a pre-trained neural network (YAMNet) as a feature extractor, training only a small classifier on top:
-- **Best for**: Sound categories, pattern recognition, generalization to variations
-- **Setup**: Requires training with 20+ samples per class (5-10 minutes)
-- **Accuracy**: 70-95% depending on training data quality
-- **False positives**: Medium (5-15%) - can misclassify similar sounds
-- **Example use cases**: "Any dog bark", "any door slam", voice command categories
-
-#### Fingerprinting Method: Dejavu
-
-Creates unique audio "signatures" for exact matching (like Shazam):
 - **Best for**: Exact sound recognition, specific audio (game sounds, alerts, jingles)
 - **Setup**: Just register reference audio (instant)
 - **Accuracy**: 96-100% for exact matches
 - **False positives**: Near-zero (<1%) - requires exact or very similar audio
-- **Example use cases**: Game audio events, specific alerts, musical cues
+- **Example use cases**: Game audio events, specific alerts, musical cues, notification sounds
 
-### Which Method Should I Use?
+### How It Works
 
-**Use ML if you want:**
-- Pattern recognition ("recognize any crying baby")
-- Generalization to variations of sounds
-- Sound categories rather than exact matches
-
-**Use Fingerprinting if you want:**
-- Exact sound matching ("recognize this specific mario death sound")
-- Near-zero false positives
-- Simple setup without training
-- Game audio, alerts, or jingles
-
-**Recommendation**: For specific sounds like game audio, use fingerprinting - it's simpler, more accurate, and eliminates false positives.
+Audio fingerprinting creates unique "signatures" for exact matching:
+- Uses FFT (Fast Fourier Transform) to analyze frequency content
+- Identifies spectral peaks and creates hashes
+- Stores fingerprints in database (PostgreSQL/MySQL/in-memory)
+- Matches audio by comparing hash patterns
+- 96% accuracy with 2-second clips, 100% with 5+ seconds
 
 ## Quick Start
 
-### ML Method
-
-```bash
-# 1. Prepare training data
-mkdir -p training/mario_dies training/background
-# Add your audio samples to training/mario_dies/
-python generate_background.py synthetic training/background/ --num-samples 20
-
-# 2. Train model
-python train.py
-
-# 3. Listen in real-time
-python listen.py --method ml
-```
-
-### Fingerprinting Method
-
 ```bash
 # 1. Create YAML metadata files for each audio file
-# source_sounds/fingerprining/song.yaml:
+# source_sounds/song.yaml:
 #   source: song.mp3
 #   metadata:
 #     game: Game Name
 #     song: Song Title
 
 # 2. Generate fingerprint files (version-controlled)
-python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
 # 3. Start database and import fingerprints + metadata
 docker-compose up -d
 python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
 
 # 4. Listen in real-time with metadata
-python listen.py --method fingerprint --db-type postgresql
+python listen.py --db-type postgresql
 ```
 
 ## Documentation
 
-Detailed documentation for each component:
+Detailed documentation:
 
-- **[ML Method](docs/ml.md)** - YAMNet transfer learning guide (training, classification, real-time listening)
-- **[Fingerprinting Method](docs/fingerprinting.md)** - Dejavu fingerprinting guide (YAML metadata, fingerprint generation, database import, recognition)
+- **[Fingerprinting Guide](docs/fingerprinting.md)** - Complete guide (YAML metadata, fingerprint generation, database import, recognition)
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input
-- **[Utilities](docs/utilities.md)** - Audio conversion, background sample generation, helper tools
 
 ## Real-time Listening
 
-The `listen.py` script supports both methods with unified CLI:
-
 ```bash
-# ML method (default)
-python listen.py --method ml
+# Quick start with in-memory database
+python listen.py
 
-# Fingerprinting method
-python listen.py --method fingerprint
+# PostgreSQL database (persistent)
+python listen.py --db-type postgresql
 
-# Common options for both methods
+# With config file
+python listen.py --config config.yaml
+
+# Common options
 python listen.py --list                    # List audio devices
 python listen.py --microphone              # Use microphone instead of loopback
 python listen.py --device "BlackHole"      # Select specific device
-python listen.py --threshold 0.8           # Adjust confidence threshold
+python listen.py --threshold 0.5           # Adjust confidence threshold
 python listen.py --window-duration 2.0     # Set analysis window size
 python listen.py --energy-threshold -40    # Filter silence/noise
 python listen.py --verbose                 # Show detailed output
 ```
 
-See method-specific docs for detailed usage.
+See [Fingerprinting Guide](docs/fingerprinting.md) for detailed usage and tuning tips.
 
 ## Project Structure
 
 ```
 audio2mqtt/
 ├── docs/                      # Documentation
-│   ├── ml.md                  # ML method guide
-│   ├── fingerprinting.md      # Fingerprinting method guide
-│   ├── setup.md               # Audio device setup
-│   └── utilities.md           # Helper tools
-├── source_sounds/             # Source audio files
-│   └── fingerprining/         # Audio + YAML metadata files
-├── training/                  # Training data (ML) or reference audio (fingerprinting)
-│   ├── class_name/            # Audio samples organized by class (ML)
-│   ├── background/            # Background/negative samples (ML only)
+│   ├── fingerprinting.md      # Complete fingerprinting guide
+│   └── setup.md               # Audio device setup
+├── training/                  # Reference audio and fingerprints
 │   └── fingerprints/          # Generated fingerprint JSON files (version-controlled)
-├── models/                    # Trained models (ML only)
-│   ├── classifier.keras
-│   └── class_names.txt
 ├── fingerprinting/            # Fingerprinting module
 │   ├── engine.py              # Dejavu wrapper with metadata
 │   ├── metadata_db.py         # Metadata database (JSONB)
+│   ├── postgres_db.py         # PostgreSQL adapter for Dejavu
+│   ├── memory_db.py           # In-memory database for Dejavu
 │   ├── recognizer.py          # Real-time recognition with metadata
 │   └── storage_config.py      # Database configuration
-├── listen.py                  # Real-time listening CLI (both methods)
-├── train.py                   # Training script (ML)
+├── listen.py                  # Real-time listening CLI
 ├── register_fingerprints.py   # Registration CLI (legacy, no metadata)
 ├── generate_fingerprint_files.py  # Generate fingerprint JSON from YAML
 ├── import_fingerprint_files.py    # Import fingerprints + metadata to DB
-├── generate_background.py     # Background sample generation (ML)
-├── audio_util.py              # Audio preprocessing
+├── audio_device.py            # Audio device discovery
 └── config.yaml.example        # Configuration template
 ```
-
-## Method Comparison
-
-| Feature | ML (YAMNet) | Fingerprinting (Dejavu) |
-|---------|-------------|------------------------|
-| **Best for** | Sound categories, pattern recognition | Exact sounds, specific audio |
-| **Setup** | Train model (5-10 min) | Register audio (instant) |
-| **Accuracy** | 70-95% | 96-100% |
-| **False positives** | Medium (5-15%) | Near-zero (<1%) |
-| **Generalization** | Yes - recognizes variations | No - exact matches only |
-| **Training data** | 20+ samples per class + background | Reference audio only |
-| **Database** | Not required | PostgreSQL/MySQL recommended |
 
 ## Installation
 
@@ -181,14 +120,22 @@ python scripts/apply_patches.py
 **Why patching is needed**: PyDejavu 0.1.3 on PyPI contains Python 2 syntax (print statements, `iterator.next()`, `xrange`). The patch script automatically fixes these compatibility issues in your installed package.
 
 **Core dependencies:**
-- TensorFlow 2.20+ (ML method)
-- PyDejavu 0.1.3 (fingerprinting method, requires patching)
+- PyDejavu 0.1.3 (fingerprinting, requires patching)
 - soundcard 0.4.5 (audio capture)
 - numpy, scipy (audio processing)
 - psycopg2-binary (PostgreSQL support)
+- librosa (audio processing)
+- PyYAML (configuration)
 
-**Optional:**
-- pydub + ffmpeg (multi-format audio conversion)
+## Features
+
+- ✅ **Exact audio matching** - Shazam-like recognition with 96-100% accuracy
+- ✅ **Flexible metadata** - Store custom fields (game, song, artist, etc.) in JSONB
+- ✅ **Version-controlled fingerprints** - JSON files work independently of source audio
+- ✅ **Multiple database backends** - PostgreSQL, MySQL, or in-memory
+- ✅ **Real-time recognition** - Low latency (~100-200ms)
+- ✅ **Energy-based gating** - Filters silence/noise automatically
+- ✅ **Near-zero false positives** - Exact matching eliminates false detections
 
 ## License
 

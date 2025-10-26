@@ -258,10 +258,10 @@ def main():
         epilog="""
 Examples:
   # Generate fingerprints from all YAMLs in directory
-  python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+  python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
   # Process single YAML file
-  python generate_fingerprint_files.py source_sounds/fingerprining/song.yaml training/fingerprints/
+  python generate_fingerprint_files.py source_sounds/song.yaml training/fingerprints/
 
 YAML Format:
   source: audio_file.mp3

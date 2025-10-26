@@ -113,7 +113,7 @@ metadata:
 
 **Example directory structure:**
 ```
-source_sounds/fingerprining/
+source_sounds/
 ├── Super Mario World Music - Underground [abc123].mp3
 ├── Super Mario World Music - Underground [abc123].yaml
 ├── Super Mario World Music - Overworld [def456].mp3
@@ -129,10 +129,10 @@ Generate version-controlled fingerprint JSON files from YAML metadata + audio:
 
 ```bash
 # Generate from directory of YAMLs
-python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
 # Generate from single YAML
-python generate_fingerprint_files.py source_sounds/fingerprining/song.yaml training/fingerprints/
+python generate_fingerprint_files.py source_sounds/song.yaml training/fingerprints/
 ```
 
 **What this does:**
