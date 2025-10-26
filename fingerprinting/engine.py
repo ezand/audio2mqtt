@@ -1,0 +1,242 @@
+"""Fingerprint engine using Dejavu for audio recognition."""
+
+import os
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
+import numpy as np
+from dejavu import Dejavu
+from dejavu.logic.recognizer.file_recognizer import FileRecognizer
+from dejavu.logic.recognizer.microphone_recognizer import MicrophoneRecognizer
+
+from .storage_config import get_database_config, DatabaseType
+
+
+class FingerprintEngine:
+    """Wrapper for Dejavu audio fingerprinting engine."""
+
+    def __init__(self,
+                 db_type: DatabaseType = DatabaseType.MEMORY,
+                 config_path: Optional[str] = None):
+        """Initialize fingerprint engine.
+
+        Args:
+            db_type: Database type (MEMORY, POSTGRESQL, MYSQL).
+            config_path: Path to config file (overrides db_type).
+        """
+        if config_path and os.path.exists(config_path):
+            self.config = get_database_config(config_path=config_path)
+        else:
+            self.config = get_database_config(db_type=db_type)
+
+        self.dejavu = Dejavu(self.config)
+
+    def register_file(self, file_path: str, song_name: Optional[str] = None) -> Dict:
+        """Register a single audio file.
+
+        Args:
+            file_path: Path to audio file.
+            song_name: Name to associate with fingerprint (defaults to filename).
+
+        Returns:
+            Dictionary with registration info.
+        """
+        if song_name is None:
+            song_name = Path(file_path).stem
+
+        # Fingerprint the file
+        self.dejavu.fingerprint_file(file_path, song_name=song_name)
+
+        return {
+            'file': file_path,
+            'song_name': song_name,
+            'status': 'registered'
+        }
+
+    def register_directory(self,
+                          directory: str,
+                          extensions: List[str] = ['.wav', '.mp3', '.m4a', '.ogg', '.flac'],
+                          recursive: bool = True) -> List[Dict]:
+        """Register all audio files in a directory.
+
+        Args:
+            directory: Path to directory.
+            extensions: List of file extensions to include.
+            recursive: Search subdirectories.
+
+        Returns:
+            List of registration results.
+        """
+        directory_path = Path(directory)
+        results = []
+
+        # Find all audio files
+        pattern = '**/*' if recursive else '*'
+        for ext in extensions:
+            for file_path in directory_path.glob(f"{pattern}{ext}"):
+                if file_path.is_file():
+                    try:
+                        result = self.register_file(str(file_path))
+                        results.append(result)
+                    except Exception as e:
+                        results.append({
+                            'file': str(file_path),
+                            'song_name': None,
+                            'status': 'error',
+                            'error': str(e)
+                        })
+
+        return results
+
+    def register_directory_by_class(self,
+                                    training_dir: str,
+                                    extensions: List[str] = ['.wav', '.mp3', '.m4a', '.ogg', '.flac']) -> Dict:
+        """Register audio files organized by class folders.
+
+        Expects structure: training_dir/class_name/*.wav
+
+        Args:
+            training_dir: Path to training directory.
+            extensions: List of file extensions to include.
+
+        Returns:
+            Dictionary mapping class names to registration results.
+        """
+        training_path = Path(training_dir)
+        results_by_class = {}
+
+        # Iterate over class directories
+        for class_dir in training_path.iterdir():
+            if class_dir.is_dir():
+                class_name = class_dir.name
+                class_results = []
+
+                # Register all files in class directory
+                for ext in extensions:
+                    for file_path in class_dir.glob(f"*{ext}"):
+                        if file_path.is_file():
+                            # Use class_name as song_name prefix
+                            song_name = f"{class_name}_{file_path.stem}"
+                            try:
+                                result = self.register_file(str(file_path), song_name=song_name)
+                                class_results.append(result)
+                            except Exception as e:
+                                class_results.append({
+                                    'file': str(file_path),
+                                    'song_name': song_name,
+                                    'status': 'error',
+                                    'error': str(e)
+                                })
+
+                results_by_class[class_name] = class_results
+
+        return results_by_class
+
+    def recognize_file(self, file_path: str) -> Optional[Dict]:
+        """Recognize audio from file.
+
+        Args:
+            file_path: Path to audio file.
+
+        Returns:
+            Match result or None if no match.
+        """
+        results = self.dejavu.recognize(FileRecognizer, file_path)
+
+        if results:
+            # Extract class name from song_name (format: class_name_filename)
+            song_name = results.get('song_name', '')
+            class_name = song_name.split('_')[0] if '_' in song_name else song_name
+
+            return {
+                'class': class_name,
+                'song_name': song_name,
+                'confidence': results.get('input_confidence', 0.0),
+                'offset': results.get('offset_seconds', 0),
+                'input_total_hashes': results.get('input_total_hashes', 0),
+                'fingerprinted_hashes_in_db': results.get('fingerprinted_hashes_in_db', 0),
+                'hashes_matched_in_input': results.get('hashes_matched_in_input', 0)
+            }
+
+        return None
+
+    def recognize_audio(self, audio_data: np.ndarray, sample_rate: int = 16000) -> Optional[Dict]:
+        """Recognize audio from numpy array.
+
+        Args:
+            audio_data: Audio samples as numpy array.
+            sample_rate: Sample rate in Hz.
+
+        Returns:
+            Match result or None if no match.
+        """
+        # Dejavu expects mono audio as 1D array
+        if audio_data.ndim > 1:
+            audio_data = audio_data.mean(axis=1)
+
+        # Convert to int16 if float
+        if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
+            audio_data = (audio_data * 32767).astype(np.int16)
+
+        # Write to temporary WAV file (Dejavu limitation)
+        import tempfile
+        from scipy.io import wavfile
+
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            wavfile.write(tmp_path, sample_rate, audio_data)
+
+        try:
+            result = self.recognize_file(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+
+        return result
+
+    def get_songs(self) -> List[Dict]:
+        """Get list of registered songs.
+
+        Returns:
+            List of song dictionaries with id and name.
+        """
+        db = self.dejavu.db
+        songs = db.get_songs()
+        return [{'id': song[0], 'name': song[1]} for song in songs]
+
+    def get_song_count(self) -> int:
+        """Get count of registered songs.
+
+        Returns:
+            Number of songs in database.
+        """
+        return len(self.get_songs())
+
+    def delete_songs(self, song_names: List[str]) -> int:
+        """Delete songs by name.
+
+        Args:
+            song_names: List of song names to delete.
+
+        Returns:
+            Number of songs deleted.
+        """
+        db = self.dejavu.db
+        deleted_count = 0
+
+        for song_name in song_names:
+            # Get song info
+            songs = db.get_songs()
+            for song_id, name in songs:
+                if name == song_name:
+                    db.delete_unfingerprinted_song(song_id)
+                    deleted_count += 1
+                    break
+
+        return deleted_count
+
+    def clear_database(self) -> None:
+        """Clear all fingerprints from database."""
+        db = self.dejavu.db
+        songs = db.get_songs()
+        for song_id, _ in songs:
+            db.delete_unfingerprinted_song(song_id)

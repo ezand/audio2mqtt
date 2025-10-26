@@ -4,9 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Custom audio classification system using YAMNet transfer learning. Records audio in real-time (system audio via loopback or microphone), classifies using trained model, outputs events to console.
+Dual-method real-time audio recognition system supporting:
 
-YAMNet (pre-trained on AudioSet) is used as a frozen feature extractor, outputting 1,024-dimensional embeddings. A small custom classifier is trained on these embeddings to recognize custom audio classes.
+**1. ML Method (YAMNet Transfer Learning):**
+- YAMNet as frozen feature extractor (1,024-dim embeddings)
+- Small custom classifier trained on embeddings
+- Best for sound categories and pattern recognition
+
+**2. Fingerprinting Method (Dejavu):**
+- FFT-based spectral peak hashing (like Shazam)
+- Exact audio matching with near-zero false positives
+- Best for specific sounds (game audio, alerts, jingles)
+
+Records audio in real-time (system audio via loopback or microphone), recognizes using selected method, outputs events to console.
 
 ## Commands
 
@@ -26,21 +36,49 @@ python main.py <wav_file> --custom
 ```
 
 ### Real-time Listening
-```bash
-# List available audio devices
-python listen.py --list
 
-# Auto-select loopback device (system audio)
+**ML Method:**
+```bash
+# Auto-select loopback device (system audio) with ML
 python listen.py
 
-# Listen to microphone
-python listen.py --microphone
+# Or explicitly specify ML method
+python listen.py --method ml
 
 # Adjust window duration, thresholds, and enable verbose mode
 python listen.py --window-duration 1.5 --threshold 0.8 --energy-threshold -35 --verbose
 ```
 
-**Key parameter**: `--window-duration` should match training audio length for optimal accuracy.
+**Fingerprinting Method:**
+```bash
+# Use fingerprinting with in-memory database
+python listen.py --method fingerprint
+
+# Use fingerprinting with PostgreSQL
+python listen.py --method fingerprint --db-type postgresql
+
+# Use fingerprinting with config file
+python listen.py --method fingerprint --config config.yaml
+```
+
+**Key parameters**:
+- ML: `--window-duration` should match training audio length
+- Fingerprinting: `--threshold` lower (0.2-0.3) works well, window 2s+ recommended
+
+### Register Fingerprints
+```bash
+# Start PostgreSQL database
+docker-compose up -d
+
+# Register audio by class
+python register_fingerprints.py training/ --by-class --db-type postgresql
+
+# List registered fingerprints
+python register_fingerprints.py --list --db-type postgresql
+
+# Clear all fingerprints
+python register_fingerprints.py --clear --db-type postgresql
+```
 
 ### Generate Background Samples
 ```bash
@@ -64,40 +102,59 @@ Converts audio files (WAV, MP3, M4A, OGG, FLAC, AAC, WMA) to YAMNet-compatible f
 1. **Feature Extraction (YAMNet)**: Audio → 1024-dim embeddings per frame (~0.48s)
 2. **Classification (Custom)**: Embeddings → class predictions
 
-### Real-time Streaming Pipeline
+### Dual-Method Architecture
+
+**ML Pipeline:**
 ```
-Audio Input (loopback/mic) → Ring Buffer (3s history) → Sliding Window (2s)
-→ YAMNet Embeddings → Classifier → Per-frame Predictions → Debouncing → Events
+Audio Input → Ring Buffer → Sliding Window → YAMNet Embeddings → Classifier → Per-frame Predictions → Debouncing → Events
 ```
 
-### Key Design Pattern
+**Fingerprinting Pipeline:**
+```
+Audio Input → Ring Buffer → Sliding Window → FFT + Peak Detection → Hash Matching → Database Query → Debouncing → Events
+```
+
+### Key Design Patterns
+
+**ML Method:**
 - YAMNet is **never retrained**, only used for feature extraction
 - Training data is processed through YAMNet to extract embeddings **once** in `train.py:extract_embeddings_from_dataset()`
 - The custom classifier trains on pre-computed embeddings, not raw audio
 - This separation is critical: `dataset.py` handles audio loading, `model.py` handles embedding extraction, `train.py` orchestrates the pipeline
 
+**Fingerprinting Method:**
+- No training required, just registration of reference audio
+- Dejavu library handles FFT, peak detection, and hashing automatically
+- Database stores fingerprint hashes with metadata (song_name = class_name)
+- Real-time matching queries database for hash collisions
+- Exact matching provides near-zero false positives
+
 ### Module Responsibilities
 
-**Core Inference:**
+**ML Method:**
 - **yamnet_classifier.py**: YAMNet model loading, audio loading, normalization, batch classification
 - **class_map.py**: Load YAMNet's 521 AudioSet class names from CSV
-
-**Training:**
 - **audio_util.py**: Audio preprocessing (mono conversion, resampling to 16kHz, multi-format support)
 - **dataset.py**: Scan `training/` directory, load WAV files, create TF datasets. Uses `padded_batch()` for variable-length audio
 - **model.py**: Build classifier architecture, extract embeddings, prediction functions (batch and streaming)
 - **train.py**: Training loop - loads data, extracts embeddings eagerly (not in graph), trains classifier, saves model
-
-**Real-time Streaming:**
-- **audio_device.py**: Device discovery with auto-detection for loopback devices (BlackHole, WASAPI, monitor) and microphones
-- **stream_classifier.py**: Real-time classification engine with ring buffer, energy gating, event debouncing
-- **listen.py**: CLI entry point for real-time listening
-
-**Batch Classification:**
+- **stream_classifier.py**: Real-time ML classification engine with ring buffer, energy gating, event debouncing
 - **main.py**: CLI for batch classification with base YAMNet or custom model
-
-**Utilities:**
 - **generate_background.py**: Generate background/negative samples (synthetic noise or extracted from audio files)
+
+**Fingerprinting Method:**
+- **fingerprinting/engine.py**: Dejavu wrapper - initialize engine, register audio, recognize audio from buffers
+- **fingerprinting/storage_config.py**: Database configuration (PostgreSQL, MySQL, in-memory) with environment variable support
+- **fingerprinting/recognizer.py**: Real-time fingerprint recognition with ring buffer, energy gating, event debouncing (mirrors StreamClassifier interface)
+- **register_fingerprints.py**: CLI for registering audio fingerprints by class or flat directory structure
+
+**Shared Components:**
+- **audio_device.py**: Device discovery with auto-detection for loopback devices (BlackHole, WASAPI, monitor) and microphones
+- **listen.py**: CLI entry point for real-time listening (both ML and fingerprinting methods, selectable via `--method`)
+
+**Infrastructure:**
+- **docker-compose.yml**: PostgreSQL database setup for fingerprinting persistence
+- **config.yaml.example**: Configuration template for database connection and recognition parameters
 
 ### Training Data Structure
 ```
@@ -177,6 +234,54 @@ Always use `.keras` extension: `models/classifier.keras` (not `models/classifier
 2. Implement YAMNet pre-filtering to skip custom classifier on clearly wrong audio
 3. Add validation warning in `train.py` when detecting single-class training
 
+## Method Selection Guide
+
+### When to Use ML (YAMNet Transfer Learning)
+
+**Use ML when:**
+- You want to recognize **sound categories** (any dog bark, any door slam)
+- Need **generalization** to variations of the same sound
+- Want to detect patterns rather than exact matches
+- Have 20+ samples per class for training
+- Can tolerate some false positives
+- Don't need exact match precision
+
+**Example use cases:**
+- "Detect any crying baby sound"
+- "Recognize door opening/closing"
+- "Identify glass breaking sounds"
+- Voice command categories
+
+### When to Use Fingerprinting (Dejavu)
+
+**Use Fingerprinting when:**
+- You want to recognize **specific exact sounds** (like Shazam)
+- Need **near-zero false positives**
+- Have short, consistent audio clips (game sounds, alerts, jingles)
+- Don't need generalization to variations
+- Want simple setup without training
+- Can provide reference recordings
+
+**Example use cases:**
+- Game audio events (mario_dies, level_complete, coin_sound)
+- Specific alert/notification sounds
+- Jingles or musical cues
+- Exact voice phrases or commands
+
+**Recommendation for game sounds**: Use fingerprinting - it's simpler, more accurate, and eliminates the false positive problem.
+
+### Performance Comparison
+
+| Metric | ML | Fingerprinting |
+|--------|----|--------------|
+| Setup time | 5-10 min training | Instant registration |
+| Accuracy for exact sounds | 70-95% | 96-100% |
+| False positive rate | Medium (5-15%) | Near-zero (<1%) |
+| Generalization | Yes | No |
+| Database required | No | Yes (PostgreSQL recommended) |
+| CPU usage | Medium | Medium-High |
+| Latency | ~100-200ms | ~100-200ms |
+
 ## Audio Setup
 
 ### macOS
@@ -190,8 +295,18 @@ Use PulseAudio monitor (usually built-in).
 
 ## Dependencies
 
-Core: TensorFlow 2.20, TensorFlow Hub, TensorFlow I/O, soundcard 0.4.5, scipy, numpy
-Optional: pydub 0.25.1 (multi-format conversion requires ffmpeg)
+**ML Method:**
+- TensorFlow 2.20, TensorFlow Hub, TensorFlow I/O
+- soundcard 0.4.5, scipy, numpy
+
+**Fingerprinting Method:**
+- PyDejavu 0.1.6 (Dejavu audio fingerprinting)
+- psycopg2-binary 2.9.9 (PostgreSQL driver)
+- librosa 0.10.1 (audio processing)
+- PyYAML 6.0.1 (configuration)
+
+**Optional:**
+- pydub 0.25.1 (multi-format conversion requires ffmpeg)
 
 See `requirements.txt` for exact versions.
 

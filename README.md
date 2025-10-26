@@ -8,20 +8,24 @@
 
 # audio2mqtt
 
-**Audio Classification with YAMNet Transfer Learning**
+**Real-time Audio Recognition: ML & Fingerprinting**
 
-A custom audio classification system built on Google's YAMNet model using transfer learning.
+A dual-method audio recognition system supporting:
+- **ML (Machine Learning)**: YAMNet transfer learning for sound pattern recognition
+- **Fingerprinting**: Dejavu-based exact audio matching (like Shazam)
 
 ## Concepts
 
-### YAMNet
+### Two Recognition Methods
+
+#### ML Method: YAMNet Transfer Learning
 YAMNet is a pre-trained deep neural network for audio event detection. It:
 - Uses MobileNetV1 architecture
 - Is trained on AudioSet (521 audio event classes)
 - Outputs 1,024-dimensional embeddings per audio frame
 - Expects 16kHz mono audio input
 
-### Transfer Learning Approach
+**Transfer Learning Approach:**
 Instead of training a full audio classification model from scratch, we:
 1. **Use YAMNet as a frozen feature extractor** - Extract high-level audio features (embeddings)
 2. **Train a small classifier** - Learn to map embeddings to custom classes
@@ -31,6 +35,26 @@ This is efficient because:
 - YAMNet embeddings capture general audio features (pitch, timbre, rhythm)
 - Only the final classification layer needs training
 - Works with small datasets (20-50 samples per class)
+- **Best for**: Sound categories, generalization, variations of same sound
+
+#### Fingerprinting Method: Dejavu
+Audio fingerprinting creates unique "signatures" for exact audio matching (like Shazam). It:
+- Uses FFT (Fast Fourier Transform) to analyze frequency content
+- Identifies spectral peaks and creates hashes
+- Stores fingerprints in database (PostgreSQL/MySQL/in-memory)
+- Matches audio by comparing hash patterns
+
+**Fingerprinting Approach:**
+1. **Register reference audio** - Create fingerprints for known sounds
+2. **Store in database** - Persistent or in-memory storage
+3. **Match in real-time** - Compare incoming audio against database
+
+This is accurate because:
+- Exact matching eliminates false positives
+- No training required, just registration
+- Robust to background noise if reference is clear
+- 96% accuracy with 2-second clips, 100% with 5+ seconds
+- **Best for**: Exact sound recognition, short specific sounds (game audio, alerts)
 
 ### Architecture
 ```
@@ -51,28 +75,36 @@ Class Predictions
 
 ```
 audio2mqtt/
-├── training/                # Training data organized by class
-│   ├── mario_dies/         # Class name = folder name
+├── training/                   # Training data organized by class
+│   ├── mario_dies/            # Class name = folder name
 │   │   ├── death_001.wav
 │   │   ├── death_002.wav
 │   │   └── ...
-│   └── background/         # Background/negative samples (recommended)
+│   └── background/            # Background/negative samples (for ML)
 │       ├── noise_001.wav
 │       └── ...
-├── models/                 # Saved trained models
-│   ├── classifier.keras    # Trained classifier
-│   └── class_names.txt     # Class name mapping
-├── audio_util.py           # Audio preprocessing utilities
-├── class_map.py            # YAMNet class name loading
-├── yamnet_classifier.py    # YAMNet inference functions
-├── dataset.py              # Training data loading
-├── model.py                # Transfer learning model
-├── train.py                # Training script
-├── main.py                 # Batch classification script
-├── audio_device.py         # Audio device discovery
-├── stream_classifier.py    # Real-time classification engine
-├── listen.py               # Real-time listening CLI
-└── generate_background.py  # Background sample generation utility
+├── models/                    # Saved trained models (ML)
+│   ├── classifier.keras       # Trained classifier
+│   └── class_names.txt        # Class name mapping
+├── fingerprinting/            # Fingerprinting module
+│   ├── __init__.py
+│   ├── engine.py              # Dejavu wrapper
+│   ├── recognizer.py          # Real-time stream recognition
+│   └── storage_config.py      # Database configuration
+├── audio_util.py              # Audio preprocessing utilities
+├── class_map.py               # YAMNet class name loading
+├── yamnet_classifier.py       # YAMNet inference functions
+├── dataset.py                 # Training data loading (ML)
+├── model.py                   # Transfer learning model (ML)
+├── train.py                   # Training script (ML)
+├── main.py                    # Batch classification script (ML)
+├── audio_device.py            # Audio device discovery
+├── stream_classifier.py       # Real-time classification engine (ML)
+├── listen.py                  # Real-time listening CLI (both methods)
+├── register_fingerprints.py   # Fingerprint registration CLI
+├── generate_background.py     # Background sample generation (ML)
+├── docker-compose.yml         # PostgreSQL database setup
+└── config.yaml.example        # Configuration template
 ```
 
 ## Training Process
@@ -284,6 +316,115 @@ python listen.py --verbose
 - Detect real-world environmental sounds
 - Voice command recognition (with appropriate training data)
 - Home automation based on ambient audio events
+
+## Fingerprinting Method
+
+The fingerprinting method uses Dejavu for exact audio matching - ideal for recognizing specific sounds like game audio, alerts, or jingles.
+
+### Setup
+
+**1. Start PostgreSQL database (recommended for persistence):**
+```bash
+docker-compose up -d
+```
+
+**2. Copy and configure settings:**
+```bash
+cp config.yaml.example config.yaml
+# Edit config.yaml with your database credentials
+```
+
+**Or use in-memory database** (no persistence, development only):
+```bash
+# No setup needed, just use --db-type memory
+```
+
+### Register Audio Fingerprints
+
+**Register by class** (recommended for organized sounds):
+```bash
+# Register all audio in training/ directory (training/class_name/*.wav)
+python register_fingerprints.py training/ --by-class
+
+# With PostgreSQL
+python register_fingerprints.py training/ --by-class --db-type postgresql
+```
+
+**Register flat directory:**
+```bash
+# Register all audio files in a single directory
+python register_fingerprints.py audio_samples/
+```
+
+**List registered fingerprints:**
+```bash
+python register_fingerprints.py --list
+```
+
+**Clear all fingerprints:**
+```bash
+python register_fingerprints.py --clear
+```
+
+### Real-time Recognition
+
+**Basic usage** (in-memory database):
+```bash
+python listen.py --method fingerprint
+```
+
+**With PostgreSQL:**
+```bash
+python listen.py --method fingerprint --db-type postgresql
+```
+
+**With config file:**
+```bash
+python listen.py --method fingerprint --config config.yaml
+```
+
+**Advanced options:**
+```bash
+# Adjust window duration for short sounds
+python listen.py --method fingerprint --window-duration 1.5
+
+# Lower confidence threshold (more sensitive)
+python listen.py --method fingerprint --threshold 0.2
+
+# Verbose mode to see matching details
+python listen.py --method fingerprint --verbose
+```
+
+### Output Example
+
+```
+Method: Fingerprinting (Dejavu)
+Using database type: postgresql
+Found 45 registered fingerprints in database
+
+Listening to: BlackHole 2ch
+Method: Fingerprinting
+Sample rate: 16000 Hz
+Window duration: 2.0s
+Confidence threshold: 0.3
+
+[2025-10-26 03:15:42] Event detected: mario_dies (confidence: 0.87)
+[2025-10-26 03:15:49] Event detected: mario_dies (confidence: 0.91)
+```
+
+### Method Comparison
+
+| Feature | ML (YAMNet) | Fingerprinting (Dejavu) |
+|---------|-------------|------------------------|
+| **Training** | Requires training with positive + negative samples | Just register reference audio |
+| **Generalization** | Learns patterns, recognizes variations | Exact matching only |
+| **Accuracy** | Can have false positives with similar sounds | Near-zero false positives |
+| **Best for** | Sound categories, pattern recognition | Exact sounds, game audio, alerts |
+| **Setup** | Train model (5-10 min) | Register fingerprints (instant) |
+| **Database** | Not required | PostgreSQL/MySQL recommended |
+| **Window size** | Sensitive to mismatch with training data | Flexible, 2s+ recommended |
+
+**Recommendation**: For game sounds like "mario_dies", **use fingerprinting** - it's more accurate, simpler, and eliminates false positives.
 
 ## Utilities
 

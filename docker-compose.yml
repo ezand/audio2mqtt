@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: audio2mqtt-postgres
+    environment:
+      POSTGRES_DB: audio2mqtt
+      POSTGRES_USER: audio2mqtt
+      POSTGRES_PASSWORD: audio2mqtt_pass
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audio2mqtt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Uncomment to use MySQL instead of PostgreSQL
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: audio2mqtt-mysql
+  #   environment:
+  #     MYSQL_DATABASE: audio2mqtt
+  #     MYSQL_USER: audio2mqtt
+  #     MYSQL_PASSWORD: audio2mqtt_pass
+  #     MYSQL_ROOT_PASSWORD: root_pass
+  #   volumes:
+  #     - ./data/mysql:/var/lib/mysql
+  #   ports:
+  #     - "3306:3306"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5

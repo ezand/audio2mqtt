@@ -1,0 +1,28 @@
+# Audio2MQTT Configuration
+# Copy this file to config.yaml and update with your settings
+
+fingerprint:
+  database:
+    # Database type: postgresql, mysql, or memory
+    type: postgresql
+
+    # Database connection settings (not needed for memory type)
+    host: localhost
+    port: 5432
+    database: audio2mqtt
+    user: audio2mqtt
+    password: audio2mqtt_pass
+
+  recognition:
+    # Duration of audio chunk to fingerprint (seconds)
+    chunk_seconds: 2.0
+
+    # Overlap between chunks (seconds)
+    overlap: 0.5
+
+    # Minimum confidence threshold for matches (0.0-1.0)
+    confidence_threshold: 0.3
+
+# Environment variables can also be used for database settings:
+# POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+# MYSQL_HOST, MYSQL_PORT, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
