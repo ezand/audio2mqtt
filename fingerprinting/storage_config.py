@@ -6,6 +6,9 @@ from typing import Dict, Optional
 
 import yaml
 
+# Import memory database to register it with Dejavu
+from .memory_db import MemoryDatabase  # noqa: F401
+
 
 class DatabaseType(Enum):
     """Supported database types."""
@@ -48,9 +51,8 @@ def get_memory_config() -> Dict:
         Dejavu configuration dictionary.
     """
     return {
-        "database": {
-            "type": "memory"
-        }
+        "database_type": "memory",
+        "database": {}
     }
 
 
@@ -72,8 +74,8 @@ def get_postgresql_config(host: Optional[str] = None,
         Dejavu configuration dictionary.
     """
     return {
+        "database_type": "postgres",
         "database": {
-            "type": "postgres",
             "host": host or os.getenv("POSTGRES_HOST", "localhost"),
             "port": port or int(os.getenv("POSTGRES_PORT", "5432")),
             "database": database or os.getenv("POSTGRES_DB", "audio2mqtt"),
@@ -101,8 +103,8 @@ def get_mysql_config(host: Optional[str] = None,
         Dejavu configuration dictionary.
     """
     return {
+        "database_type": "mysql",
         "database": {
-            "type": "mysql",
             "host": host or os.getenv("MYSQL_HOST", "localhost"),
             "port": port or int(os.getenv("MYSQL_PORT", "3306")),
             "database": database or os.getenv("MYSQL_DB", "audio2mqtt"),
@@ -144,8 +146,8 @@ def load_config_from_file(config_path: str) -> Dict:
         return get_memory_config()
     elif db_type_str in ['postgresql', 'postgres']:
         return {
+            "database_type": "postgres",
             "database": {
-                "type": "postgres",
                 "host": db_config.get('host', 'localhost'),
                 "port": db_config.get('port', 5432),
                 "database": db_config.get('database', 'audio2mqtt'),
@@ -155,8 +157,8 @@ def load_config_from_file(config_path: str) -> Dict:
         }
     elif db_type_str == 'mysql':
         return {
+            "database_type": "mysql",
             "database": {
-                "type": "mysql",
                 "host": db_config.get('host', 'localhost'),
                 "port": db_config.get('port', 3306),
                 "database": db_config.get('database', 'audio2mqtt'),

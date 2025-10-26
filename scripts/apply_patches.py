@@ -84,6 +84,11 @@ def patch_pydejavu():
 
     dejavu_dir = dejavu_init.parent
     dejavu_database_sql = dejavu_dir / 'database_sql.py'
+    dejavu_database = dejavu_dir / 'database.py'
+    dejavu_recognize = dejavu_dir / 'recognize.py'
+    dejavu_decoder = dejavu_dir / 'decoder.py'
+    dejavu_wavio = dejavu_dir / 'wavio.py'
+    dejavu_fingerprint = dejavu_dir / 'fingerprint.py'
 
     print(f"Found PyDejavu at: {dejavu_dir}")
     print()
@@ -131,13 +136,17 @@ def patch_pydejavu():
         with open(dejavu_database_sql, 'r') as f:
             db_content = f.read()
 
-        if 'from itertools import izip_longest' in db_content:
+        if 'from itertools import izip_longest' in db_content or 'import Queue' in db_content:
             patches_db = {
                 # Fix izip_longest → zip_longest
                 'from itertools import izip_longest':
                     'from itertools import zip_longest',
                 'izip_longest(':
-                    'zip_longest('
+                    'zip_longest(',
+
+                # Fix Queue → queue
+                'import Queue':
+                    'import queue as Queue'
             }
 
             if apply_patch(dejavu_database_sql, patches_db):
@@ -150,6 +159,151 @@ def patch_pydejavu():
     else:
         print("  ⚠ database_sql.py not found")
 
+    # Patch database.py
+    print("Patching database.py...")
+    if dejavu_database.exists():
+        with open(dejavu_database, 'r') as f:
+            db_content = f.read()
+
+        if 'import dejavu.database_sql' in db_content and 'try:' not in db_content.split('import dejavu.database_sql')[0][-50:]:
+            patches_database = {
+                # Make MySQLdb import optional
+                '# Import our default database handler\nimport dejavu.database_sql':
+                    '# Import our default database handler\ntry:\n    import dejavu.database_sql\nexcept ImportError:\n    # MySQLdb not available, database_sql won\'t work\n    pass'
+            }
+
+            if apply_patch(dejavu_database, patches_database):
+                print("  ✓ database.py patched")
+                success_count += 1
+            patch_count += 1
+        else:
+            print("  ✓ database.py already patched")
+            success_count += 1
+    else:
+        print("  ⚠ database.py not found")
+
+    # Patch recognize.py
+    print("Patching recognize.py...")
+    if dejavu_recognize.exists():
+        with open(dejavu_recognize, 'r') as f:
+            rec_content = f.read()
+
+        if 'np.fromstring' in rec_content:
+            patches_recognize = {
+                # Fix np.fromstring → np.frombuffer
+                'nums = np.fromstring(data, np.int16)':
+                    'nums = np.frombuffer(data, np.int16)'
+            }
+
+            if apply_patch(dejavu_recognize, patches_recognize):
+                print("  ✓ recognize.py patched")
+                success_count += 1
+            patch_count += 1
+        else:
+            print("  ✓ recognize.py already patched")
+            success_count += 1
+    else:
+        print("  ⚠ recognize.py not found")
+
+    # Patch decoder.py
+    print("Patching decoder.py...")
+    if dejavu_decoder.exists():
+        with open(dejavu_decoder, 'r') as f:
+            dec_content = f.read()
+
+        if 'np.fromstring' in dec_content or 'xrange' in dec_content:
+            patches_decoder = {
+                # Fix np.fromstring → np.frombuffer
+                'data = np.fromstring(audiofile._data, np.int16)':
+                    'data = np.frombuffer(audiofile._data, np.int16)',
+
+                # Fix xrange → range
+                'for chn in xrange(audiofile.channels):':
+                    'for chn in range(audiofile.channels):'
+            }
+
+            if apply_patch(dejavu_decoder, patches_decoder):
+                print("  ✓ decoder.py patched")
+                success_count += 1
+            patch_count += 1
+        else:
+            print("  ✓ decoder.py already patched")
+            success_count += 1
+    else:
+        print("  ⚠ decoder.py not found")
+
+    # Patch wavio.py
+    print("Patching wavio.py...")
+    if dejavu_wavio.exists():
+        with open(dejavu_wavio, 'r') as f:
+            wavio_content = f.read()
+
+        if '_np.fromstring' in wavio_content:
+            patches_wavio = {
+                # Fix _np.fromstring → _np.frombuffer (two occurrences)
+                'raw_bytes = _np.fromstring(data, dtype=_np.uint8)':
+                    'raw_bytes = _np.frombuffer(data, dtype=_np.uint8)',
+                "a = _np.fromstring(data, dtype='<%s%d' % (dt_char, sampwidth))":
+                    "a = _np.frombuffer(data, dtype='<%s%d' % (dt_char, sampwidth))"
+            }
+
+            if apply_patch(dejavu_wavio, patches_wavio):
+                print("  ✓ wavio.py patched")
+                success_count += 1
+            patch_count += 1
+        else:
+            print("  ✓ wavio.py already patched")
+            success_count += 1
+    else:
+        print("  ⚠ wavio.py not found")
+
+    # Patch fingerprint.py
+    print("Patching fingerprint.py...")
+    if dejavu_fingerprint.exists():
+        with open(dejavu_fingerprint, 'r') as f:
+            fp_content = f.read()
+
+        needs_patch = ('detected_peaks = local_max - eroded_background' in fp_content or
+                      'peaks = zip(i, j, amps)' in fp_content or
+                      'h = hashlib.sha1(\n                        "%s|%s|%s"' in fp_content or
+                      'return generate_hashes(local_maxima, fan_value=fan_value)' in fp_content or
+                      'arr2D = 10 * np.log10(arr2D)' in fp_content)
+
+        if needs_patch:
+            patches_fingerprint = {
+                # Fix boolean subtract → XOR (NumPy 2.0+ compatibility)
+                'detected_peaks = local_max - eroded_background':
+                    'detected_peaks = local_max ^ eroded_background',
+
+                # Fix zip() returns iterator in Python 3, need list for sorting
+                'peaks = zip(i, j, amps)':
+                    'peaks = list(zip(i, j, amps))',
+                'return zip(frequency_idx, time_idx)':
+                    'return list(zip(frequency_idx, time_idx))',
+
+                # Fix hashlib.sha1() requires bytes in Python 3
+                'h = hashlib.sha1(\n                        "%s|%s|%s" % (str(freq1), str(freq2), str(t_delta)))':
+                    'h = hashlib.sha1(\n                        ("%s|%s|%s" % (str(freq1), str(freq2), str(t_delta))).encode("utf-8"))',
+
+                # Fix fingerprint() returns generator but code expects list
+                'return generate_hashes(local_maxima, fan_value=fan_value)':
+                    'return list(generate_hashes(local_maxima, fan_value=fan_value))',
+
+                # Suppress expected divide-by-zero warning (zeros are handled on next line)
+                'arr2D = 10 * np.log10(arr2D)\n    arr2D[arr2D == -np.inf] = 0':
+                    'with np.errstate(divide=\'ignore\'):\n        arr2D = 10 * np.log10(arr2D)\n    arr2D[arr2D == -np.inf] = 0'
+            }
+
+            if apply_patch(dejavu_fingerprint, patches_fingerprint):
+                print("  ✓ fingerprint.py patched")
+                success_count += 1
+            patch_count += 1
+        else:
+            print("  ✓ fingerprint.py already patched")
+            success_count += 1
+    else:
+        print("  ⚠ fingerprint.py not found")
+
     print()
     if success_count > 0:
         print("Patches applied:")
@@ -158,6 +312,10 @@ def patch_pydejavu():
         print("  - Fixed xrange → range")
         print("  - Fixed relative import")
         print("  - Fixed izip_longest → zip_longest")
+        print("  - Fixed Queue → queue")
+        print("  - Made MySQLdb import optional (use PostgreSQL or in-memory)")
+        print("  - Fixed np.fromstring → np.frombuffer")
+        print("  - Fixed boolean subtract (NumPy 2.0+ compatibility)")
         print()
         return True
     else:

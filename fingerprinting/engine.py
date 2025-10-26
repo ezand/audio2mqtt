@@ -5,9 +5,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
 
 import numpy as np
+
+# Import memory database BEFORE importing Dejavu to register it
+from .memory_db import MemoryDatabase  # noqa: F401
+
 from dejavu import Dejavu
-from dejavu.logic.recognizer.file_recognizer import FileRecognizer
-from dejavu.logic.recognizer.microphone_recognizer import MicrophoneRecognizer
+from dejavu.recognize import FileRecognizer, MicrophoneRecognizer
 
 from .storage_config import get_database_config, DatabaseType
 from .metadata_db import MetadataDB

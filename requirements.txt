@@ -12,6 +12,8 @@ soundcard==0.4.5
 
 # Audio fingerprinting
 PyDejavu==0.1.3  # Requires post-install patching: python scripts/apply_patches.py
+wavio==0.0.9  # Required by PyDejavu (missing from its setup.py)
+pyaudio==0.2.14  # Required by PyDejavu (missing from its setup.py)
 psycopg2-binary==2.9.11
 librosa==0.11.0
 PyYAML==6.0.3
