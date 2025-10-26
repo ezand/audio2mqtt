@@ -40,6 +40,7 @@ Audio fingerprinting creates unique "signatures" for exact matching:
 #   metadata:
 #     game: Game Name
 #     song: Song Title
+#   debounce_seconds: 5.0  # Optional: per-song MQTT debounce override
 
 # 2. Generate fingerprint files (version-controlled)
 python generate_fingerprint_files.py source_sounds/ training/fingerprints/

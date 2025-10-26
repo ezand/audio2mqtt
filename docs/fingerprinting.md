@@ -109,7 +109,13 @@ metadata:
   console: SNES
   year: 1990
   # Add any custom fields you need
+debounce_seconds: 5.0  # Optional: Override global MQTT debounce (default: 5.0)
 ```
+
+**Fields:**
+- `source`: Required - audio filename (relative to YAML file)
+- `metadata`: Required - flexible metadata fields (game, song, artist, etc.)
+- `debounce_seconds`: Optional - per-song MQTT debounce override (defaults to 5.0 if omitted)
 
 **Example directory structure:**
 ```

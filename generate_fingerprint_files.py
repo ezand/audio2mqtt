@@ -129,6 +129,15 @@ def generate_fingerprint(yaml_path: Path, output_dir: Path, force: bool = False)
 
         source_file = yaml_data.get('source')
         metadata = yaml_data.get('metadata', {})
+        debounce_seconds = yaml_data.get('debounce_seconds', 5.0)  # Default to 5.0
+
+        # Validate debounce_seconds
+        try:
+            debounce_seconds = float(debounce_seconds)
+            if debounce_seconds < 0:
+                debounce_seconds = 5.0
+        except (ValueError, TypeError):
+            debounce_seconds = 5.0
 
         if not source_file:
             return {
@@ -218,11 +227,12 @@ def generate_fingerprint(yaml_path: Path, output_dir: Path, force: bool = False)
         except Exception as e:
             print(f"  Warning: Could not extract fingerprints: {e}")
 
-        # Build output JSON
+        # Build output JSON (always include debounce_seconds)
         fingerprint_data = {
             'song_name': song_name,
             'source_file': source_file,
             'metadata': metadata,
+            'debounce_seconds': debounce_seconds,
             'file_sha1': file_sha1,
             'date_created': datetime.now().isoformat(),
             'total_hashes': len(fingerprints),

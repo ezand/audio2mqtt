@@ -129,7 +129,13 @@ metadata:
   game: Game Name
   song: Song Title
   # Any other custom fields (artist, year, console, etc.)
+debounce_seconds: 5.0  # Optional: per-song MQTT debounce override (default: 5.0)
 ```
+
+**Fields:**
+- `source`: Required - audio filename
+- `metadata`: Required - flexible descriptive metadata
+- `debounce_seconds`: Optional - per-song MQTT debounce override (defaults to 5.0)
 
 **JSON Fingerprint Format:**
 ```json
@@ -137,6 +143,7 @@ metadata:
   "song_name": "game_name_song_title",
   "source_file": "Song Title [id123].mp3",
   "metadata": {"game": "Game Name", "song": "Song Title"},
+  "debounce_seconds": 5.0,
   "file_sha1": "...",
   "total_hashes": 1234,
   "fingerprints": [{"hash": "...", "offset": 32}]
@@ -172,6 +179,7 @@ mqtt:
   keepalive: 60
   qos: 1
   retain: false
+  debounce_seconds: 5.0
 ```
 
 **MQTT Config Options:**
@@ -183,6 +191,7 @@ mqtt:
 - `keepalive`: Connection keepalive seconds (default: 60)
 - `qos`: Quality of Service 0-2 (default: 1)
 - `retain`: Retain published messages (default: false)
+- `debounce_seconds`: Global MQTT debounce duration (default: 5.0). Can be overridden per-song in YAML metadata.
 
 **Topic Structure:** `{topic_prefix}/event/{song_name}`
 

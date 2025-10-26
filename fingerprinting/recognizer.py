@@ -170,6 +170,7 @@ class StreamRecognizer:
         Rules:
         - If different song than last published → always publish (resets timer)
         - If same song → only publish if debounce_duration has passed
+        - Uses per-song debounce_seconds from metadata if available, else global setting
 
         Args:
             detection: Detection dictionary with 'song_name' or 'class' field.
@@ -179,6 +180,16 @@ class StreamRecognizer:
         """
         current_time = time.time()
         song_name = detection.get('song_name', detection.get('class'))
+
+        # Get per-song debounce duration (should always be present in metadata)
+        metadata = detection.get('metadata', {})
+        debounce_duration = metadata.get('debounce_seconds', self.debounce_duration)
+
+        # Validate (paranoid check)
+        try:
+            debounce_duration = max(0.0, float(debounce_duration))
+        except (ValueError, TypeError):
+            debounce_duration = self.debounce_duration
 
         # If this is a different song than the last published one, reset and publish
         if self.last_published_song != song_name:
@@ -190,14 +201,14 @@ class StreamRecognizer:
         last_time = self.last_event_time.get(song_name, 0)
         time_since_last = current_time - last_time
 
-        if time_since_last >= self.debounce_duration:
+        if time_since_last >= debounce_duration:
             # Debounce period passed - publish
             self.last_event_time[song_name] = current_time
             self.last_published_song = song_name
             return (True, None, time_since_last)
         else:
-            # Within debounce window - skip
-            return (False, f"within debounce window ({self.debounce_duration}s)", time_since_last)
+            # Within debounce window - skip (show actual duration used)
+            return (False, f"within debounce window ({debounce_duration}s)", time_since_last)
 
     def get_stats(self) -> Dict:
         """Get recognizer statistics.
@@ -276,7 +287,7 @@ def start_listening(device,
     print(f"Confidence threshold: {confidence_threshold}")
     print(f"Energy threshold: {energy_threshold_db} dB")
     if mqtt_publisher:
-        print(f"MQTT debounce: {debounce_duration}s (resets on different song)")
+        print(f"MQTT debounce: {debounce_duration}s global (per-song override in metadata, resets on different song)")
     if verbose:
         print(f"Verbose mode: enabled")
     print("Press Ctrl+C to stop\n")

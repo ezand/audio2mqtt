@@ -60,8 +60,17 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
         song_name = data.get('song_name')
         source_file = data.get('source_file')
         metadata = data.get('metadata', {})
+        debounce_seconds = data.get('debounce_seconds', 5.0)  # Default if missing
         file_sha1 = data.get('file_sha1', '0' * 40)  # Default if missing
         fingerprints = data.get('fingerprints', [])
+
+        # Validate debounce_seconds
+        try:
+            debounce_seconds = float(debounce_seconds)
+            if debounce_seconds < 0:
+                debounce_seconds = 5.0
+        except (ValueError, TypeError):
+            debounce_seconds = 5.0
 
         if not song_name:
             return {
@@ -117,13 +126,15 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
         # Mark song as fingerprinted
         db.set_song_fingerprinted(song_id)
 
-        # Store metadata if provided
-        if metadata:
-            engine.metadata_db.insert_metadata(
-                song_name=song_name,
-                metadata=metadata,
-                source_file=source_file or ''
-            )
+        # Always store metadata with debounce_seconds
+        metadata_to_store = dict(metadata)
+        metadata_to_store['debounce_seconds'] = debounce_seconds
+
+        engine.metadata_db.insert_metadata(
+            song_name=song_name,
+            metadata=metadata_to_store,
+            source_file=source_file or ''
+        )
 
         return {
             'file': str(json_path),

@@ -107,6 +107,68 @@ python listen.py --config config.yaml --debounce 10.0
 python listen.py --config config.yaml --verbose
 ```
 
+### Per-Song Debounce Override
+
+Each song can have its own `debounce_seconds` setting in the YAML metadata file, overriding the global setting:
+
+**YAML example:**
+```yaml
+source: Super Mario World Music - Course Clear Fanfare.mp3
+metadata:
+  game: Super Mario World
+  song: Course Clear Fanfare
+debounce_seconds: 10.0  # This song uses 10s instead of global 5s
+```
+
+**How it works:**
+1. During fingerprint generation, `debounce_seconds` is read from YAML (defaults to 5.0 if omitted)
+2. Stored in fingerprint JSON file and imported to database metadata
+3. At recognition time, per-song value takes precedence over global setting
+
+**Precedence:**
+```
+Per-song debounce_seconds (from YAML/metadata)
+    ↓ (if not specified)
+Global mqtt.debounce_seconds (from config)
+    ↓ (if not specified)
+CLI --debounce argument
+    ↓ (if not specified)
+Default: 5.0 seconds
+```
+
+**Use cases:**
+```yaml
+# Short jingle - allow frequent re-triggering
+source: coin_sound.wav
+metadata:
+  game: Super Mario World
+  song: Coin Collect
+debounce_seconds: 1.0
+
+# Long background music - minimize MQTT traffic
+source: overworld_theme.mp3
+metadata:
+  game: Super Mario World
+  song: Overworld
+debounce_seconds: 30.0
+
+# Critical alert - publish every detection
+source: alarm.wav
+metadata:
+  type: alert
+  priority: high
+debounce_seconds: 0.0
+```
+
+**Migration:** After adding `debounce_seconds` to YAML files, regenerate fingerprints:
+```bash
+# Regenerate fingerprint JSON files
+python generate_fingerprint_files.py source_sounds/ training/fingerprints/ --force
+
+# Re-import to database
+python import_fingerprint_files.py training/fingerprints/ --config config.yaml
+```
+
 ## Topic Structure
 
 Events are published to topics following this pattern:
