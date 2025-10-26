@@ -23,6 +23,34 @@ fingerprint:
     # Minimum confidence threshold for matches (0.0-1.0)
     confidence_threshold: 0.3
 
+mqtt:
+  # MQTT broker connection settings
+  broker: localhost
+  port: 1883
+
+  # Authentication (optional, comment out if not needed)
+  # username: your_username
+  # password: your_password
+
+  # Topic configuration
+  topic_prefix: audio_events
+
+  # Connection settings
+  client_id_prefix: audio2mqtt_listener_
+  keepalive: 60
+
+  # QoS level (0, 1, or 2)
+  qos: 1
+
+  # Retain messages
+  retain: false
+
+  # Debounce duration for same song (seconds)
+  # Prevents MQTT spam when same song detected repeatedly
+  # Publishing a different song resets the timer for all songs
+  debounce_seconds: 5.0
+
 # Environment variables can also be used for database settings:
 # POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
 # MYSQL_HOST, MYSQL_PORT, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
+# MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD

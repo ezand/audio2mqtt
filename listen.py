@@ -108,6 +108,15 @@ Note: Register audio first using:
     )
 
     parser.add_argument(
+        '--debounce',
+        type=float,
+        default=5.0,
+        help='MQTT debounce duration in seconds (default: 5.0). '
+             'Prevents MQTT spam when same song detected repeatedly. '
+             'Publishing a different song resets the timer.'
+    )
+
+    parser.add_argument(
         '--verbose',
         action='store_true',
         help='Enable verbose logging (shows audio detection and non-matches)'
@@ -177,11 +186,16 @@ Note: Register audio first using:
                 'threshold': 0.5,
                 'chunk_duration': 0.5,
                 'window_duration': 2.0,
+                'debounce': 5.0,
             }
 
             confidence_threshold = recognition_config['confidence_threshold'] if args.threshold == parser_defaults['threshold'] else args.threshold
             chunk_duration = recognition_config['chunk_seconds'] if args.chunk_duration == parser_defaults['chunk_duration'] else args.chunk_duration
             window_duration = args.window_duration  # No config equivalent yet
+
+            # Get debounce duration from config or CLI
+            mqtt_config = full_config.get('mqtt', {})
+            debounce_duration = mqtt_config.get('debounce_seconds', parser_defaults['debounce']) if args.debounce == parser_defaults['debounce'] else args.debounce
 
             # Initialize MQTT publisher if configured
             mqtt_publisher = MQTTPublisher.from_config(full_config)
@@ -198,6 +212,7 @@ Note: Register audio first using:
             confidence_threshold = args.threshold
             chunk_duration = args.chunk_duration
             window_duration = args.window_duration
+            debounce_duration = args.debounce
             print("MQTT publishing: disabled (no config file)")
     except Exception as e:
         print(f"Error initializing fingerprint engine: {e}")
@@ -227,6 +242,7 @@ Note: Register audio first using:
             window_duration=window_duration,
             confidence_threshold=confidence_threshold,
             energy_threshold_db=args.energy_threshold,
+            debounce_duration=debounce_duration,
             verbose=args.verbose,
             mqtt_publisher=mqtt_publisher
         )

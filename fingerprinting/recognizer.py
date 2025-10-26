@@ -51,14 +51,16 @@ class StreamRecognizer:
         # Ring buffer for audio history
         self.ring_buffer = deque(maxlen=self.buffer_size)
 
-        # Event debouncing
+        # Event debouncing for MQTT publishing
         self.last_event_time = {}
+        self.last_published_song = None
 
         # Statistics
         self.total_chunks = 0
         self.total_detections = 0
         self.skipped_silent_chunks = 0
         self.processed_chunks = 0
+        self.skipped_mqtt_publishes = 0
 
     def _calculate_energy_db(self, audio: np.ndarray) -> float:
         """Calculate audio energy in decibels.
@@ -158,33 +160,44 @@ class StreamRecognizer:
             else:
                 print(f"  → No match (no fingerprint matches found, threshold: {self.confidence_threshold})")
 
-        # Filter debounced events
-        filtered_detections = self._debounce_events(detections)
-        self.total_detections += len(filtered_detections)
+        # Return all detections (debouncing happens at MQTT publish level)
+        self.total_detections += len(detections)
+        return detections
 
-        return filtered_detections
+    def _should_publish_to_mqtt(self, detection: Dict) -> tuple:
+        """Check if detection should be published to MQTT based on debouncing rules.
 
-    def _debounce_events(self, detections: List[Dict]) -> List[Dict]:
-        """Filter out events that occurred too recently.
+        Rules:
+        - If different song than last published → always publish (resets timer)
+        - If same song → only publish if debounce_duration has passed
 
         Args:
-            detections: List of detection dictionaries.
+            detection: Detection dictionary with 'song_name' or 'class' field.
 
         Returns:
-            Filtered list of detections.
+            Tuple of (should_publish: bool, skip_reason: Optional[str], time_since_last: Optional[float])
         """
         current_time = time.time()
-        filtered = []
+        song_name = detection.get('song_name', detection.get('class'))
 
-        for detection in detections:
-            event_class = detection['class']
-            last_time = self.last_event_time.get(event_class, 0)
+        # If this is a different song than the last published one, reset and publish
+        if self.last_published_song != song_name:
+            self.last_published_song = song_name
+            self.last_event_time[song_name] = current_time
+            return (True, None, None)
 
-            if current_time - last_time >= self.debounce_duration:
-                filtered.append(detection)
-                self.last_event_time[event_class] = current_time
+        # Same song - check debounce timing
+        last_time = self.last_event_time.get(song_name, 0)
+        time_since_last = current_time - last_time
 
-        return filtered
+        if time_since_last >= self.debounce_duration:
+            # Debounce period passed - publish
+            self.last_event_time[song_name] = current_time
+            self.last_published_song = song_name
+            return (True, None, time_since_last)
+        else:
+            # Within debounce window - skip
+            return (False, f"within debounce window ({self.debounce_duration}s)", time_since_last)
 
     def get_stats(self) -> Dict:
         """Get recognizer statistics.
@@ -198,6 +211,7 @@ class StreamRecognizer:
             'processed_chunks': processed_chunks,
             'skipped_silent_chunks': self.skipped_silent_chunks,
             'total_detections': self.total_detections,
+            'skipped_mqtt_publishes': self.skipped_mqtt_publishes,
             'buffer_size': len(self.ring_buffer),
             'buffer_full': len(self.ring_buffer) >= self.window_size
         }
@@ -206,10 +220,12 @@ class StreamRecognizer:
         """Reset recognizer state."""
         self.ring_buffer.clear()
         self.last_event_time.clear()
+        self.last_published_song = None
         self.total_chunks = 0
         self.total_detections = 0
         self.skipped_silent_chunks = 0
         self.processed_chunks = 0
+        self.skipped_mqtt_publishes = 0
 
 
 def start_listening(device,
@@ -218,6 +234,7 @@ def start_listening(device,
                    window_duration: float = 2.0,
                    confidence_threshold: float = 0.3,
                    energy_threshold_db: float = -40.0,
+                   debounce_duration: float = 5.0,
                    verbose: bool = False,
                    event_callback: Optional[callable] = None,
                    mqtt_publisher: Optional[MQTTPublisher] = None):
@@ -230,6 +247,7 @@ def start_listening(device,
         window_duration: Duration of sliding window for recognition in seconds.
         confidence_threshold: Minimum confidence for event detection.
         energy_threshold_db: Minimum audio energy in dB to process.
+        debounce_duration: Minimum time between MQTT publishes of same song in seconds.
         verbose: Enable verbose logging.
         event_callback: Optional callback function for detected events.
         mqtt_publisher: Optional MQTT publisher for event publishing.
@@ -245,6 +263,7 @@ def start_listening(device,
         sample_rate=sample_rate,
         window_duration=window_duration,
         confidence_threshold=confidence_threshold,
+        debounce_duration=debounce_duration,
         energy_threshold_db=energy_threshold_db,
         verbose=verbose
     )
@@ -256,6 +275,8 @@ def start_listening(device,
     print(f"Window duration: {window_duration}s")
     print(f"Confidence threshold: {confidence_threshold}")
     print(f"Energy threshold: {energy_threshold_db} dB")
+    if mqtt_publisher:
+        print(f"MQTT debounce: {debounce_duration}s (resets on different song)")
     if verbose:
         print(f"Verbose mode: enabled")
     print("Press Ctrl+C to stop\n")
@@ -293,12 +314,23 @@ def start_listening(device,
                             if parts:
                                 metadata_str = f" ({', '.join(parts)})"
 
+                        # Always print to console (no debouncing for console output)
                         print(f"[{timestamp}] Event detected: {detection['class']}{metadata_str} "
                               f"(confidence: {detection['confidence']:.2f})")
 
-                        # Publish to MQTT if publisher configured
+                        # Check if should publish to MQTT (with debouncing)
                         if mqtt_publisher:
-                            mqtt_publisher.publish_event(detection)
+                            should_publish, skip_reason, time_since_last = stream_recognizer._should_publish_to_mqtt(detection)
+
+                            if should_publish:
+                                mqtt_publisher.publish_event(detection)
+                            else:
+                                # Track skipped publishes
+                                stream_recognizer.skipped_mqtt_publishes += 1
+
+                                # Log skip if verbose mode enabled
+                                if verbose:
+                                    print(f"  → MQTT publish skipped: {skip_reason} (last: {time_since_last:.1f}s ago)")
 
                         # Call event callback if provided
                         if event_callback:
@@ -320,4 +352,6 @@ def start_listening(device,
         print(f"  Processed chunks: {stats['processed_chunks']}")
         print(f"  Skipped (silent): {stats['skipped_silent_chunks']}")
         print(f"  Total detections: {stats['total_detections']}")
+        if mqtt_publisher:
+            print(f"  Skipped MQTT publishes: {stats['skipped_mqtt_publishes']}")
         print("\nGoodbye!")

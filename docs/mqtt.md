@@ -41,6 +41,9 @@ mqtt:
 
   # Retain messages
   retain: false
+
+  # Debounce duration for same song (seconds)
+  debounce_seconds: 5.0
 ```
 
 ### Configuration Options
@@ -56,6 +59,7 @@ mqtt:
 | `keepalive` | int | `60` | Connection keepalive (seconds) |
 | `qos` | int | `1` | Quality of Service (0, 1, or 2) |
 | `retain` | bool | `false` | Retain published messages |
+| `debounce_seconds` | float | `5.0` | Minimum time between MQTT publishes of same song (seconds). Resets when different song detected. |
 
 ### Environment Variables
 
@@ -66,6 +70,41 @@ export MQTT_BROKER=192.168.1.100
 export MQTT_PORT=1883
 export MQTT_USERNAME=myuser
 export MQTT_PASSWORD=mypass
+```
+
+### Debounce Behavior
+
+The `debounce_seconds` setting prevents MQTT spam when the same song is detected repeatedly:
+
+**How it works:**
+1. When a song is detected and published to MQTT, a timer starts for that song
+2. If the same song is detected again within `debounce_seconds`, MQTT publish is skipped
+3. **When a DIFFERENT song is detected and published**, the timer resets for ALL songs
+4. Skipped publishes are logged in verbose mode and counted in statistics
+
+**Example with `debounce_seconds: 5.0`:**
+```
+[12:00:00] Event detected: mario_overworld (published to MQTT)
+[12:00:02] Event detected: mario_overworld (skipped - within 5s)
+[12:00:03] Event detected: mario_underground (published - different song, resets timer)
+[12:00:04] Event detected: mario_overworld (published - timer was reset)
+[12:00:07] Event detected: mario_overworld (skipped - within 5s of last publish)
+```
+
+**Console vs MQTT:**
+- **Console output**: Shows ALL detections immediately (no debouncing)
+- **MQTT publishing**: Debounced per song to prevent message spam
+
+**CLI override:**
+```bash
+# Use config file debounce setting (5.0s)
+python listen.py --config config.yaml
+
+# Override with CLI argument
+python listen.py --config config.yaml --debounce 10.0
+
+# View skipped publishes in verbose mode
+python listen.py --config config.yaml --verbose
 ```
 
 ## Topic Structure
