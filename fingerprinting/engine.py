@@ -232,7 +232,17 @@ class FingerprintEngine:
         """
         db = self.dejavu.db
         songs = db.get_songs()
-        return [{'id': song[0], 'name': song[1]} for song in songs]
+        result = []
+        for song in songs:
+            # Handle both dict (MemoryDatabase) and tuple (SQL databases) formats
+            if isinstance(song, dict):
+                result.append({
+                    'id': song.get(db.FIELD_SONG_ID) or song.get('song_id'),
+                    'name': song.get(db.FIELD_SONGNAME) or song.get('song_name')
+                })
+            else:
+                result.append({'id': song[0], 'name': song[1]})
+        return result
 
     def get_song_count(self) -> int:
         """Get count of registered songs.

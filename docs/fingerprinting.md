@@ -58,22 +58,15 @@ The fingerprinting workflow uses **YAML metadata files** for flexible metadata a
 
 ### Database Setup
 
-**Option 1: PostgreSQL (recommended for persistence)**
+**In-Memory Database (recommended for current PyDejavu version)**
 
-Start PostgreSQL database:
-```bash
-docker-compose up -d
-```
+No setup needed, just use `--db-type memory`. Note: fingerprints and metadata are lost when process exits. Re-import JSON files on restart.
 
-Copy and configure settings:
-```bash
-cp config.yaml.example config.yaml
-# Edit config.yaml with your database credentials
-```
+**PostgreSQL/MySQL (requires additional setup)**
 
-**Option 2: In-Memory Database (development only)**
-
-No setup needed, just use `--db-type memory`. Note: fingerprints and metadata are lost when process exits.
+PyDejavu 0.1.3 only ships with MySQL support. To use PostgreSQL, you would need to:
+1. Implement a PostgreSQL database adapter (similar to `fingerprinting/memory_db.py`)
+2. Or use MySQL instead via docker-compose
 
 ### Configuration File
 
@@ -168,30 +161,31 @@ git commit -m "Add fingerprints for Super Mario World music"
 
 ## Import Fingerprint Files
 
-Import JSON fingerprint files into database:
+Import JSON fingerprint files into database (no audio files needed):
 
 ```bash
 # Import all fingerprints from directory (in-memory)
-python import_fingerprint_files.py training/fingerprints/
-
-# Import into PostgreSQL
-python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
-
-# Import with config file
-python import_fingerprint_files.py training/fingerprints/ --config config.yaml
+python import_fingerprint_files.py training/fingerprints/ --db-type memory
 
 # Import single file
-python import_fingerprint_files.py training/fingerprints/song.json --db-type postgresql
+python import_fingerprint_files.py training/fingerprints/song.json --db-type memory
 ```
 
 **What this does:**
-- Loads JSON fingerprint files
-- Finds source audio files (required for Dejavu registration)
-- Registers audio in Dejavu (generates fresh fingerprints)
+- Loads JSON fingerprint files (pre-computed hashes)
+- Imports fingerprints directly into database via Dejavu API
 - Stores metadata in `song_metadata` table with JSONB
 - Skips songs already in database
+- **No audio files required** - uses pre-computed fingerprints from JSON
 
-**Note:** Source audio files must be accessible for import (Dejavu limitation).
+**Benefits:**
+- ✅ Version-controlled fingerprints are self-contained
+- ✅ No audio files needed after initial generation
+- ✅ Fast import (no re-fingerprinting)
+- ✅ Team members can clone repo and import without source audio
+- ✅ Reproducible - same JSON = same database state
+
+**Note**: PyDejavu 0.1.3 only supports MySQL/in-memory databases. PostgreSQL support requires implementing a PostgreSQL database adapter. Use `--db-type memory` for development/testing.
 
 ## Legacy Registration (Without Metadata)
 

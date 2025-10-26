@@ -67,13 +67,17 @@ python listen.py --method fingerprint --config config.yaml
 
 ### Fingerprinting with Metadata (Recommended)
 ```bash
-# 1. Generate fingerprint files from YAML metadata + audio (version-controlled)
+# 1. Generate fingerprint files from YAML metadata + audio (version-controlled, one-time)
 python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
 
-# 2. Import fingerprints + metadata into database
-docker-compose up -d
-python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
+# 2. Import fingerprints into database (no audio files needed)
+python import_fingerprint_files.py training/fingerprints/ --db-type memory
+
+# Or use in-memory for development (data not persisted)
+python import_fingerprint_files.py training/fingerprints/ --db-type memory
 ```
+
+**Note**: PostgreSQL/MySQL support requires additional database adapters not included in base PyDejavu. Use `--db-type memory` for testing without persistence, or implement a PostgreSQL adapter for production use.
 
 ### Register Fingerprints (Legacy)
 ```bash

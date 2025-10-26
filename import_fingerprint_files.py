@@ -32,7 +32,7 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
         song_name = data.get('song_name')
         source_file = data.get('source_file')
         metadata = data.get('metadata', {})
-        file_sha1 = data.get('file_sha1')
+        file_sha1 = data.get('file_sha1', '0' * 40)  # Default if missing
         fingerprints = data.get('fingerprints', [])
 
         if not song_name:
@@ -40,6 +40,14 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
                 'file': str(json_path),
                 'status': 'error',
                 'error': 'Missing song_name in JSON'
+            }
+
+        if not fingerprints:
+            return {
+                'file': str(json_path),
+                'song_name': song_name,
+                'status': 'error',
+                'error': 'No fingerprints in JSON'
             }
 
         # Check if song already exists
@@ -52,48 +60,48 @@ def import_fingerprint_file(json_path: Path, engine: FingerprintEngine) -> Dict:
                 'reason': 'Already exists in database'
             }
 
-        # Import into Dejavu database
-        # Note: Dejavu doesn't support direct fingerprint import easily
-        # For now, we'll need to re-fingerprint from source audio file
-        # or implement custom database insertion
+        # Direct database insertion using Dejavu's database API
+        db = engine.dejavu.db
 
-        # Find source audio file
-        audio_file = None
-        if source_file:
-            # Check multiple possible locations
-            possible_paths = [
-                Path(source_file),
-                json_path.parent.parent / 'fingerprining' / source_file,
-                json_path.parent.parent / source_file,
-                json_path.parent / source_file
-            ]
+        # Insert song into songs table
+        print(f"  Inserting song: {song_name}...")
+        song_id = db.insert_song(song_name, file_sha1)
 
-            for path in possible_paths:
-                if path.exists():
-                    audio_file = path
-                    break
+        # Insert fingerprints in batches for performance
+        print(f"  Inserting {len(fingerprints):,} fingerprints...")
+        batch_size = 1000
+        for i in range(0, len(fingerprints), batch_size):
+            batch = fingerprints[i:i + batch_size]
+            for fp in batch:
+                hash_value = fp.get('hash')
+                offset = fp.get('offset')
+                if hash_value is not None and offset is not None:
+                    db.insert(hash_value, song_id, offset)
 
-        if not audio_file:
-            return {
-                'file': str(json_path),
-                'song_name': song_name,
-                'status': 'error',
-                'error': f'Source audio file not found: {source_file}'
-            }
+            # Progress indicator
+            progress = min(i + batch_size, len(fingerprints))
+            if len(fingerprints) > batch_size:
+                print(f"    Progress: {progress:,}/{len(fingerprints):,}", end='\r')
 
-        # Register audio file with metadata
-        print(f"  Fingerprinting: {audio_file.name}...")
-        result = engine.register_file(
-            str(audio_file),
-            song_name=song_name,
-            metadata=metadata
-        )
+        if len(fingerprints) > batch_size:
+            print()  # Newline after progress
+
+        # Mark song as fingerprinted
+        db.set_song_fingerprinted(song_id)
+
+        # Store metadata if provided
+        if metadata:
+            engine.metadata_db.insert_metadata(
+                song_name=song_name,
+                metadata=metadata,
+                source_file=source_file or ''
+            )
 
         return {
             'file': str(json_path),
             'song_name': song_name,
-            'audio_file': str(audio_file),
-            'metadata_fields': list(metadata.keys()),
+            'fingerprint_count': len(fingerprints),
+            'metadata_fields': list(metadata.keys()) if metadata else [],
             'status': 'success'
         }
 
@@ -126,7 +134,7 @@ Examples:
 
 Notes:
   - Skips songs that already exist in database
-  - Requires source audio files to be accessible
+  - Uses pre-computed fingerprints from JSON (no audio files required)
   - Stores metadata in separate song_metadata table
         """
     )
@@ -172,15 +180,8 @@ Notes:
         print(f"Error: Input path not found: {input_path}")
         sys.exit(1)
 
-    # Parse database type
-    if args.db_type == 'memory':
-        db_type = DatabaseType.MEMORY
-    elif args.db_type == 'postgresql':
-        db_type = DatabaseType.POSTGRESQL
-    elif args.db_type == 'mysql':
-        db_type = DatabaseType.MYSQL
-    else:
-        db_type = DatabaseType.MEMORY
+    # Parse database type enum
+    db_type = DatabaseType(args.db_type)
 
     # Initialize engine
     try:
@@ -226,7 +227,9 @@ Notes:
 
         if result['status'] == 'success':
             print(f"  ✓ Imported: {result['song_name']}")
-            print(f"    Metadata fields: {', '.join(result['metadata_fields'])}")
+            print(f"    Fingerprints: {result.get('fingerprint_count', 0):,}")
+            if result.get('metadata_fields'):
+                print(f"    Metadata fields: {', '.join(result['metadata_fields'])}")
         elif result['status'] == 'skipped':
             print(f"  → Skipped: {result['song_name']} ({result['reason']})")
         else:
