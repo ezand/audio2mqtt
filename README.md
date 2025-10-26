@@ -158,9 +158,20 @@ python listen.py --device "BlackHole"
 python listen.py --device-id 1
 ```
 
-**Adjust confidence threshold:**
+**Advanced options:**
 ```bash
+# Adjust confidence threshold (0.0-1.0, default: 0.7)
 python listen.py --threshold 0.8
+
+# Adjust energy threshold to filter silence/noise (default: -40 dB)
+python listen.py --energy-threshold -35  # less sensitive, only louder sounds
+python listen.py --energy-threshold -50  # more sensitive, quieter sounds
+
+# Enable verbose logging (shows audio detection and non-matches)
+python listen.py --verbose
+
+# Combine options
+python listen.py --verbose --threshold 0.6 --energy-threshold -45
 ```
 
 **Output example:**
@@ -171,15 +182,32 @@ Listening... (Press Ctrl+C to stop)
 
 [2025-10-26 01:30:45] Event detected: mario_dies (confidence: 0.89)
 [2025-10-26 01:30:52] Event detected: mario_dies (confidence: 0.91)
+
+Statistics:
+  Total chunks: 1250
+  Processed chunks: 45
+  Skipped (silent): 1205
+  Total detections: 2
+```
+
+**Verbose mode output:**
+```bash
+python listen.py --verbose
+
+[2025-10-26 01:30:45.123] Audio detected (energy: -32.1 dB) - processing...
+  → No match (best: mario_dies @ 0.45, threshold: 0.7)
+[2025-10-26 01:30:46.234] Audio detected (energy: -28.5 dB) - processing...
+[2025-10-26 01:30:46] Event detected: mario_dies (confidence: 0.89)
 ```
 
 **How it works:**
-- Captures audio in 0.5 second chunks
-- Maintains a 3-second ring buffer with sliding window
-- Processes 2-second windows with 50% overlap
-- Per-frame classification (not averaged)
-- Event debouncing prevents duplicate detections
-- ~100-200ms latency from audio to detection
+- **Energy gating**: Calculates RMS energy in dB, skips chunks below threshold (saves CPU, prevents false positives)
+- **Captures audio** in 0.5 second chunks
+- **Ring buffer**: Maintains 3-second history with sliding window
+- **Inference**: Processes 2-second windows with 50% overlap
+- **Per-frame classification**: Each frame (~0.48s) classified separately, not averaged
+- **Event debouncing**: Prevents duplicate detections within 1 second
+- **Latency**: ~100-200ms from audio to detection
 
 ## Utilities
 

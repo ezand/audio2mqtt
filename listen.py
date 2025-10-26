@@ -111,6 +111,19 @@ Examples:
         help='Audio chunk duration in seconds (default: 0.5)'
     )
 
+    parser.add_argument(
+        '--energy-threshold',
+        type=float,
+        default=-40.0,
+        help='Minimum audio energy in dB to process (default: -40.0, lower=more sensitive)'
+    )
+
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose logging (shows audio detection and non-matches)'
+    )
+
     args = parser.parse_args()
 
     # List devices and exit
@@ -147,7 +160,9 @@ Examples:
         classifier=classifier,
         class_names=class_names,
         chunk_duration=args.chunk_duration,
-        confidence_threshold=args.threshold
+        confidence_threshold=args.threshold,
+        energy_threshold_db=args.energy_threshold,
+        verbose=args.verbose
     )
 
 
