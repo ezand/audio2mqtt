@@ -65,12 +65,22 @@ python listen.py --method fingerprint --config config.yaml
 - ML: `--window-duration` should match training audio length
 - Fingerprinting: `--threshold` lower (0.2-0.3) works well, window 2s+ recommended
 
-### Register Fingerprints
+### Fingerprinting with Metadata (Recommended)
+```bash
+# 1. Generate fingerprint files from YAML metadata + audio (version-controlled)
+python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+
+# 2. Import fingerprints + metadata into database
+docker-compose up -d
+python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
+```
+
+### Register Fingerprints (Legacy)
 ```bash
 # Start PostgreSQL database
 docker-compose up -d
 
-# Register audio by class
+# Register audio by class (without metadata)
 python register_fingerprints.py training/ --by-class --db-type postgresql
 
 # List registered fingerprints
@@ -125,8 +135,12 @@ Audio Input → Ring Buffer → Sliding Window → FFT + Peak Detection → Hash
 **Fingerprinting Method:**
 - No training required, just registration of reference audio
 - Dejavu library handles FFT, peak detection, and hashing automatically
-- Database stores fingerprint hashes with metadata (song_name = class_name)
-- Real-time matching queries database for hash collisions
+- Database stores fingerprint hashes with metadata in separate tables:
+  - `songs` table: song_id, song_name (Dejavu native)
+  - `fingerprints` table: hash, song_id, offset (Dejavu native)
+  - `song_metadata` table: song_name, metadata (JSONB), source_file (custom)
+- Metadata is flexible JSONB - store any fields (game, song, artist, year, etc.)
+- Real-time matching queries database for hash collisions, returns results with metadata
 - Exact matching provides near-zero false positives
 
 ### Module Responsibilities
@@ -143,10 +157,13 @@ Audio Input → Ring Buffer → Sliding Window → FFT + Peak Detection → Hash
 - **generate_background.py**: Generate background/negative samples (synthetic noise or extracted from audio files)
 
 **Fingerprinting Method:**
-- **fingerprinting/engine.py**: Dejavu wrapper - initialize engine, register audio, recognize audio from buffers
+- **fingerprinting/engine.py**: Dejavu wrapper with metadata support - initialize engine, register audio with metadata, recognize audio from buffers
+- **fingerprinting/metadata_db.py**: Metadata database manager - stores flexible JSONB metadata for songs (PostgreSQL/MySQL/SQLite)
 - **fingerprinting/storage_config.py**: Database configuration (PostgreSQL, MySQL, in-memory) with environment variable support
-- **fingerprinting/recognizer.py**: Real-time fingerprint recognition with ring buffer, energy gating, event debouncing (mirrors StreamClassifier interface)
-- **register_fingerprints.py**: CLI for registering audio fingerprints by class or flat directory structure
+- **fingerprinting/recognizer.py**: Real-time fingerprint recognition with metadata - ring buffer, energy gating, event debouncing (mirrors StreamClassifier interface)
+- **register_fingerprints.py**: CLI for registering audio fingerprints by class or flat directory structure (legacy, no metadata)
+- **generate_fingerprint_files.py**: Generate fingerprint JSON files from YAML metadata + audio (for version control)
+- **import_fingerprint_files.py**: Import fingerprint JSON files into database with metadata
 
 **Shared Components:**
 - **audio_device.py**: Device discovery with auto-detection for loopback devices (BlackHole, WASAPI, monitor) and microphones
@@ -155,8 +172,12 @@ Audio Input → Ring Buffer → Sliding Window → FFT + Peak Detection → Hash
 **Infrastructure:**
 - **docker-compose.yml**: PostgreSQL database setup for fingerprinting persistence
 - **config.yaml.example**: Configuration template for database connection and recognition parameters
+- **source_sounds/fingerprining/**: Source audio files with YAML metadata files
+- **training/fingerprints/**: Generated fingerprint JSON files (version-controlled)
 
 ### Training Data Structure
+
+**ML Method:**
 ```
 training/
 ├── class_name_1/
@@ -168,6 +189,39 @@ training/
 Folder name = class label. `dataset.scan_training_directory()` automatically discovers classes.
 
 **Critical**: Train with ≥2 classes. Single-class training causes softmax to always output 100% confidence regardless of input.
+
+**Fingerprinting Method:**
+```
+source_sounds/fingerprining/
+├── Song Title [id123].mp3
+├── Song Title [id123].yaml      # Metadata
+└── ...
+
+training/fingerprints/           # Generated (version-controlled)
+├── Song Title [id123].json      # Fingerprints + metadata
+└── ...
+```
+
+**YAML Metadata Format:**
+```yaml
+source: Song Title [id123].mp3
+metadata:
+  game: Game Name
+  song: Song Title
+  # Any other custom fields (artist, year, console, etc.)
+```
+
+**JSON Fingerprint Format:**
+```json
+{
+  "song_name": "game_name_song_title",
+  "source_file": "Song Title [id123].mp3",
+  "metadata": {"game": "Game Name", "song": "Song Title"},
+  "file_sha1": "...",
+  "total_hashes": 1234,
+  "fingerprints": [{"hash": "...", "offset": 32}]
+}
+```
 
 ### Embedding Extraction Strategy
 

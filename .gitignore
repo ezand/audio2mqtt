@@ -5,7 +5,7 @@ ENV/
 env/
 
 # Development
-test_sounds/
+source_sounds/
 
 # Python
 __pycache__/

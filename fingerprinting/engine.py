@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 import numpy as np
 from dejavu import Dejavu
@@ -10,10 +10,11 @@ from dejavu.logic.recognizer.file_recognizer import FileRecognizer
 from dejavu.logic.recognizer.microphone_recognizer import MicrophoneRecognizer
 
 from .storage_config import get_database_config, DatabaseType
+from .metadata_db import MetadataDB
 
 
 class FingerprintEngine:
-    """Wrapper for Dejavu audio fingerprinting engine."""
+    """Wrapper for Dejavu audio fingerprinting engine with metadata support."""
 
     def __init__(self,
                  db_type: DatabaseType = DatabaseType.MEMORY,
@@ -30,13 +31,18 @@ class FingerprintEngine:
             self.config = get_database_config(db_type=db_type)
 
         self.dejavu = Dejavu(self.config)
+        self.metadata_db = MetadataDB(self.config)
 
-    def register_file(self, file_path: str, song_name: Optional[str] = None) -> Dict:
-        """Register a single audio file.
+    def register_file(self,
+                     file_path: str,
+                     song_name: Optional[str] = None,
+                     metadata: Optional[Dict[str, Any]] = None) -> Dict:
+        """Register a single audio file with optional metadata.
 
         Args:
             file_path: Path to audio file.
             song_name: Name to associate with fingerprint (defaults to filename).
+            metadata: Optional metadata dictionary to store with fingerprint.
 
         Returns:
             Dictionary with registration info.
@@ -47,10 +53,19 @@ class FingerprintEngine:
         # Fingerprint the file
         self.dejavu.fingerprint_file(file_path, song_name=song_name)
 
+        # Store metadata if provided
+        if metadata:
+            self.metadata_db.insert_metadata(
+                song_name=song_name,
+                metadata=metadata,
+                source_file=file_path
+            )
+
         return {
             'file': file_path,
             'song_name': song_name,
-            'status': 'registered'
+            'status': 'registered',
+            'has_metadata': metadata is not None
         }
 
     def register_directory(self,
@@ -132,11 +147,12 @@ class FingerprintEngine:
 
         return results_by_class
 
-    def recognize_file(self, file_path: str) -> Optional[Dict]:
+    def recognize_file(self, file_path: str, include_metadata: bool = True) -> Optional[Dict]:
         """Recognize audio from file.
 
         Args:
             file_path: Path to audio file.
+            include_metadata: Whether to include metadata in result.
 
         Returns:
             Match result or None if no match.
@@ -148,7 +164,7 @@ class FingerprintEngine:
             song_name = results.get('song_name', '')
             class_name = song_name.split('_')[0] if '_' in song_name else song_name
 
-            return {
+            result = {
                 'class': class_name,
                 'song_name': song_name,
                 'confidence': results.get('input_confidence', 0.0),
@@ -158,14 +174,26 @@ class FingerprintEngine:
                 'hashes_matched_in_input': results.get('hashes_matched_in_input', 0)
             }
 
+            # Add metadata if requested
+            if include_metadata:
+                metadata_entry = self.metadata_db.get_metadata(song_name)
+                if metadata_entry:
+                    result['metadata'] = metadata_entry['metadata']
+
+            return result
+
         return None
 
-    def recognize_audio(self, audio_data: np.ndarray, sample_rate: int = 16000) -> Optional[Dict]:
+    def recognize_audio(self,
+                       audio_data: np.ndarray,
+                       sample_rate: int = 16000,
+                       include_metadata: bool = True) -> Optional[Dict]:
         """Recognize audio from numpy array.
 
         Args:
             audio_data: Audio samples as numpy array.
             sample_rate: Sample rate in Hz.
+            include_metadata: Whether to include metadata in result.
 
         Returns:
             Match result or None if no match.
@@ -187,7 +215,7 @@ class FingerprintEngine:
             wavfile.write(tmp_path, sample_rate, audio_data)
 
         try:
-            result = self.recognize_file(tmp_path)
+            result = self.recognize_file(tmp_path, include_metadata=include_metadata)
         finally:
             os.unlink(tmp_path)
 
@@ -235,8 +263,81 @@ class FingerprintEngine:
         return deleted_count
 
     def clear_database(self) -> None:
-        """Clear all fingerprints from database."""
+        """Clear all fingerprints and metadata from database."""
         db = self.dejavu.db
         songs = db.get_songs()
         for song_id, _ in songs:
             db.delete_unfingerprinted_song(song_id)
+
+        # Clear metadata as well
+        self.metadata_db.clear_all_metadata()
+
+    def get_metadata_for_song(self, song_name: str) -> Optional[Dict[str, Any]]:
+        """Get metadata for a specific song.
+
+        Args:
+            song_name: Song identifier.
+
+        Returns:
+            Metadata dictionary or None if not found.
+        """
+        return self.metadata_db.get_metadata(song_name)
+
+    def query_songs_by_metadata(self, field: str, value: Any) -> List[Dict]:
+        """Query songs by metadata field.
+
+        Args:
+            field: Metadata field name (supports dot notation for nested fields).
+            value: Value to match.
+
+        Returns:
+            List of matching songs with metadata.
+        """
+        return self.metadata_db.query_by_field(field, value)
+
+    def get_all_metadata(self) -> List[Dict]:
+        """Get all song metadata.
+
+        Returns:
+            List of all metadata entries.
+        """
+        return self.metadata_db.get_all_metadata()
+
+    def export_song_fingerprints(self, song_name: str) -> Optional[Dict]:
+        """Export fingerprints and metadata for a song.
+
+        Args:
+            song_name: Song identifier.
+
+        Returns:
+            Dictionary with fingerprints and metadata or None if not found.
+        """
+        # Get song info
+        db = self.dejavu.db
+        songs = db.get_songs()
+        song_id = None
+        for sid, name in songs:
+            if name == song_name:
+                song_id = sid
+                break
+
+        if song_id is None:
+            return None
+
+        # Get fingerprints from database
+        # Note: This requires direct database access which Dejavu doesn't expose nicely
+        # For now, return structure without fingerprints (to be implemented if needed)
+        metadata_entry = self.metadata_db.get_metadata(song_name)
+
+        return {
+            'song_name': song_name,
+            'song_id': song_id,
+            'metadata': metadata_entry['metadata'] if metadata_entry else {},
+            'source_file': metadata_entry['source_file'] if metadata_entry else None,
+            # 'fingerprints': []  # Would need custom Dejavu query
+        }
+
+    def close(self):
+        """Close database connections."""
+        if hasattr(self, 'metadata_db'):
+            self.metadata_db.close()

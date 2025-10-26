@@ -73,13 +73,21 @@ python listen.py --method ml
 ### Fingerprinting Method
 
 ```bash
-# 1. Start database (optional, can use in-memory)
+# 1. Create YAML metadata files for each audio file
+# source_sounds/fingerprining/song.yaml:
+#   source: song.mp3
+#   metadata:
+#     game: Game Name
+#     song: Song Title
+
+# 2. Generate fingerprint files (version-controlled)
+python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+
+# 3. Start database and import fingerprints + metadata
 docker-compose up -d
+python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
 
-# 2. Register audio fingerprints
-python register_fingerprints.py training/ --by-class --db-type postgresql
-
-# 3. Listen in real-time
+# 4. Listen in real-time with metadata
 python listen.py --method fingerprint --db-type postgresql
 ```
 
@@ -88,7 +96,7 @@ python listen.py --method fingerprint --db-type postgresql
 Detailed documentation for each component:
 
 - **[ML Method](docs/ml.md)** - YAMNet transfer learning guide (training, classification, real-time listening)
-- **[Fingerprinting Method](docs/fingerprinting.md)** - Dejavu fingerprinting guide (setup, registration, recognition)
+- **[Fingerprinting Method](docs/fingerprinting.md)** - Dejavu fingerprinting guide (YAML metadata, fingerprint generation, database import, recognition)
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input
 - **[Utilities](docs/utilities.md)** - Audio conversion, background sample generation, helper tools
 
@@ -124,19 +132,25 @@ audio2mqtt/
 │   ├── fingerprinting.md      # Fingerprinting method guide
 │   ├── setup.md               # Audio device setup
 │   └── utilities.md           # Helper tools
+├── source_sounds/             # Source audio files
+│   └── fingerprining/         # Audio + YAML metadata files
 ├── training/                  # Training data (ML) or reference audio (fingerprinting)
-│   ├── class_name/            # Audio samples organized by class
-│   └── background/            # Background/negative samples (ML only)
+│   ├── class_name/            # Audio samples organized by class (ML)
+│   ├── background/            # Background/negative samples (ML only)
+│   └── fingerprints/          # Generated fingerprint JSON files (version-controlled)
 ├── models/                    # Trained models (ML only)
 │   ├── classifier.keras
 │   └── class_names.txt
 ├── fingerprinting/            # Fingerprinting module
-│   ├── engine.py              # Dejavu wrapper
-│   ├── recognizer.py          # Real-time recognition
+│   ├── engine.py              # Dejavu wrapper with metadata
+│   ├── metadata_db.py         # Metadata database (JSONB)
+│   ├── recognizer.py          # Real-time recognition with metadata
 │   └── storage_config.py      # Database configuration
 ├── listen.py                  # Real-time listening CLI (both methods)
 ├── train.py                   # Training script (ML)
-├── register_fingerprints.py   # Registration CLI (fingerprinting)
+├── register_fingerprints.py   # Registration CLI (legacy, no metadata)
+├── generate_fingerprint_files.py  # Generate fingerprint JSON from YAML
+├── import_fingerprint_files.py    # Import fingerprints + metadata to DB
 ├── generate_background.py     # Background sample generation (ML)
 ├── audio_util.py              # Audio preprocessing
 └── config.yaml.example        # Configuration template

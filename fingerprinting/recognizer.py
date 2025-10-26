@@ -129,10 +129,24 @@ class StreamRecognizer:
                 'offset': match['offset'],
                 'hashes_matched': match['hashes_matched_in_input']
             }
+
+            # Add metadata if present
+            if 'metadata' in match:
+                detection['metadata'] = match['metadata']
+
             detections.append(detection)
 
             if self.verbose:
-                print(f"  → Match: {match['class']} @ {match['confidence']:.2f} "
+                metadata_str = ""
+                if 'metadata' in match:
+                    meta = match['metadata']
+                    if 'game' in meta and 'song' in meta:
+                        metadata_str = f" [{meta['game']}: {meta['song']}]"
+                    elif 'game' in meta:
+                        metadata_str = f" [{meta['game']}]"
+                    elif 'song' in meta:
+                        metadata_str = f" [{meta['song']}]"
+                print(f"  → Match: {match['class']}{metadata_str} @ {match['confidence']:.2f} "
                       f"(hashes: {match['hashes_matched_in_input']}/{match['input_total_hashes']})")
 
         elif self.verbose:
@@ -254,7 +268,20 @@ def start_listening(device,
                     # Handle detections
                     for detection in detections:
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        print(f"[{timestamp}] Event detected: {detection['class']} "
+
+                        # Format output with metadata if available
+                        metadata_str = ""
+                        if 'metadata' in detection:
+                            meta = detection['metadata']
+                            parts = []
+                            if 'game' in meta:
+                                parts.append(f"game: {meta['game']}")
+                            if 'song' in meta:
+                                parts.append(f"song: {meta['song']}")
+                            if parts:
+                                metadata_str = f" ({', '.join(parts)})"
+
+                        print(f"[{timestamp}] Event detected: {detection['class']}{metadata_str} "
                               f"(confidence: {detection['confidence']:.2f})")
 
                         if event_callback:

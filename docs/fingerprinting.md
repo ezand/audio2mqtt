@@ -27,6 +27,15 @@ This is accurate because:
 
 ## Setup
 
+### Workflow Overview
+
+The fingerprinting workflow uses **YAML metadata files** for flexible metadata and **JSON fingerprint files** for version control:
+
+1. **Create YAML metadata** for each audio file (game, song, custom fields)
+2. **Generate fingerprint JSON files** from YAML + audio (version-controlled)
+3. **Import JSON files** into database (repeatable, any database)
+4. **Recognize with metadata** - results include all metadata fields
+
 ### Database Setup
 
 **Option 1: PostgreSQL (recommended for persistence)**
@@ -44,7 +53,7 @@ cp config.yaml.example config.yaml
 
 **Option 2: In-Memory Database (development only)**
 
-No setup needed, just use `--db-type memory`. Note: fingerprints are lost when process exits.
+No setup needed, just use `--db-type memory`. Note: fingerprints and metadata are lost when process exits.
 
 ### Configuration File
 
@@ -65,21 +74,114 @@ recognition:
   energy_threshold: -40
 ```
 
-## Register Audio Fingerprints
+## Create Metadata Files
 
-### Register by Class (Recommended)
+Create YAML files alongside audio files with flexible metadata:
 
-Register all audio organized in class directories:
+**YAML Format:**
+```yaml
+source: Super Mario World Music - Underground [abc123].mp3
+metadata:
+  game: Super Mario World
+  song: Underground
+  console: SNES
+  year: 1990
+  # Add any custom fields you need
+```
+
+**Example directory structure:**
+```
+source_sounds/fingerprining/
+├── Super Mario World Music - Underground [abc123].mp3
+├── Super Mario World Music - Underground [abc123].yaml
+├── Super Mario World Music - Overworld [def456].mp3
+├── Super Mario World Music - Overworld [def456].yaml
+└── ...
+```
+
+The `metadata` section is flexible - add any fields relevant to your use case.
+
+## Generate Fingerprint Files
+
+Generate version-controlled fingerprint JSON files from YAML metadata + audio:
+
+```bash
+# Generate from directory of YAMLs
+python generate_fingerprint_files.py source_sounds/fingerprining/ training/fingerprints/
+
+# Generate from single YAML
+python generate_fingerprint_files.py source_sounds/fingerprining/song.yaml training/fingerprints/
+```
+
+**What this does:**
+- Parses YAML metadata
+- Loads corresponding audio file
+- Generates fingerprints using temporary in-memory Dejavu
+- Extracts hashes and combines with metadata
+- Saves to JSON in `training/fingerprints/`
+
+**Output JSON format:**
+```json
+{
+  "song_name": "super_mario_world_underground",
+  "source_file": "Super Mario World Music - Underground [abc123].mp3",
+  "metadata": {
+    "game": "Super Mario World",
+    "song": "Underground",
+    "console": "SNES",
+    "year": 1990
+  },
+  "file_sha1": "abc123...",
+  "date_created": "2025-10-26T12:00:00Z",
+  "total_hashes": 1234,
+  "fingerprints": [
+    {"hash": "e05b341a9b77a51fd26", "offset": 32}
+  ]
+}
+```
+
+**Commit to version control:**
+```bash
+git add training/fingerprints/
+git commit -m "Add fingerprints for Super Mario World music"
+```
+
+## Import Fingerprint Files
+
+Import JSON fingerprint files into database:
+
+```bash
+# Import all fingerprints from directory (in-memory)
+python import_fingerprint_files.py training/fingerprints/
+
+# Import into PostgreSQL
+python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
+
+# Import with config file
+python import_fingerprint_files.py training/fingerprints/ --config config.yaml
+
+# Import single file
+python import_fingerprint_files.py training/fingerprints/song.json --db-type postgresql
+```
+
+**What this does:**
+- Loads JSON fingerprint files
+- Finds source audio files (required for Dejavu registration)
+- Registers audio in Dejavu (generates fresh fingerprints)
+- Stores metadata in `song_metadata` table with JSONB
+- Skips songs already in database
+
+**Note:** Source audio files must be accessible for import (Dejavu limitation).
+
+## Legacy Registration (Without Metadata)
+
+For quick registration without metadata:
+
+### Register by Class
 
 ```bash
 # Register training/ directory (training/class_name/*.wav)
-python register_fingerprints.py training/ --by-class
-
-# With PostgreSQL
 python register_fingerprints.py training/ --by-class --db-type postgresql
-
-# With config file
-python register_fingerprints.py training/ --by-class --config config.yaml
 ```
 
 **Directory structure:**
@@ -87,45 +189,20 @@ python register_fingerprints.py training/ --by-class --config config.yaml
 training/
 ├── mario_dies/
 │   ├── death_001.wav
-│   ├── death_002.wav
 │   └── ...
-├── coin_sound/
-│   └── ...
-└── jump_sound/
+└── coin_sound/
     └── ...
 ```
-
-The folder name becomes the class/song name in the database.
-
-### Register Flat Directory
-
-Register all audio files in a single directory:
-
-```bash
-# Register all files in audio_samples/
-python register_fingerprints.py audio_samples/
-
-# With PostgreSQL
-python register_fingerprints.py audio_samples/ --db-type postgresql
-```
-
-File names (without extension) become the song names in the database.
 
 ### Manage Fingerprints
 
 **List registered fingerprints:**
 ```bash
-python register_fingerprints.py --list
-
-# With PostgreSQL
 python register_fingerprints.py --list --db-type postgresql
 ```
 
 **Clear all fingerprints:**
 ```bash
-python register_fingerprints.py --clear
-
-# With PostgreSQL
 python register_fingerprints.py --clear --db-type postgresql
 ```
 
@@ -213,7 +290,7 @@ python listen.py --method fingerprint --device-id 1
 
 ### Output Examples
 
-**Basic output:**
+**With metadata:**
 ```
 Method: Fingerprinting (Dejavu)
 Using database type: postgresql
@@ -225,8 +302,8 @@ Sample rate: 16000 Hz
 Window duration: 2.0s
 Confidence threshold: 0.3
 
-[2025-10-26 03:15:42] Event detected: mario_dies (confidence: 0.87)
-[2025-10-26 03:15:49] Event detected: mario_dies (confidence: 0.91)
+[2025-10-26 03:15:42] Event detected: super_mario_world_underground (game: Super Mario World, song: Underground) (confidence: 0.87)
+[2025-10-26 03:15:49] Event detected: super_mario_world_overworld (game: Super Mario World, song: Overworld) (confidence: 0.91)
 
 ^C
 Statistics:
@@ -236,15 +313,15 @@ Statistics:
   Total detections: 2
 ```
 
-**Verbose mode:**
+**Verbose mode with metadata:**
 ```bash
-python listen.py --method fingerprint --verbose
+python listen.py --method fingerprint --verbose --db-type postgresql
 
-[2025-10-26 03:15:41.234] Audio detected (energy: -32.1 dB) - processing...
+[2025-10-26 03:15:41.234] Audio detected (energy: -32.1 dB) - fingerprinting...
   → No match (no confident fingerprint matches)
-[2025-10-26 03:15:42.123] Audio detected (energy: -28.5 dB) - processing...
-[2025-10-26 03:15:42] Event detected: mario_dies (confidence: 0.87)
-  → Matched hashes: 145/167, offset alignment: 0.12s
+[2025-10-26 03:15:42.123] Audio detected (energy: -28.5 dB) - fingerprinting...
+  → Match: super_mario_world_underground [Super Mario World: Underground] @ 0.87 (hashes: 145/167)
+[2025-10-26 03:15:42] Event detected: super_mario_world_underground (game: Super Mario World, song: Underground) (confidence: 0.87)
 ```
 
 ## How It Works
