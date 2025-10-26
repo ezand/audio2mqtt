@@ -27,6 +27,26 @@ This is accurate because:
 
 ## Setup
 
+### Installation
+
+After installing dependencies, you **must** patch PyDejavu for Python 3 compatibility:
+
+```bash
+pip install -r requirements.txt
+python scripts/apply_patches.py
+```
+
+**Why patching is needed**: PyDejavu 0.1.3 on PyPI contains Python 2 syntax (`print` statements, `iterator.next()`, `xrange`, `izip_longest`). The patch script automatically fixes these in your installed package.
+
+**What the patch does**:
+- Fixes print statements: `print "..."` → `print("...")`
+- Fixes iterator: `iterator.next()` → `next(iterator)`
+- Fixes range: `xrange()` → `range()`
+- Fixes imports: `import fingerprint` → `from . import fingerprint`
+- Fixes itertools: `izip_longest` → `zip_longest`
+
+See `patches/pydejavu_python3.patch` for the full diff.
+
 ### Workflow Overview
 
 The fingerprinting workflow uses **YAML metadata files** for flexible metadata and **JSON fingerprint files** for version control:

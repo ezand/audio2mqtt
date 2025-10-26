@@ -168,15 +168,21 @@ audio2mqtt/
 | **Training data** | 20+ samples per class + background | Reference audio only |
 | **Database** | Not required | PostgreSQL/MySQL recommended |
 
-## Requirements
+## Installation
 
 ```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# IMPORTANT: Patch PyDejavu for Python 3 compatibility
+python scripts/apply_patches.py
 ```
+
+**Why patching is needed**: PyDejavu 0.1.3 on PyPI contains Python 2 syntax (print statements, `iterator.next()`, `xrange`). The patch script automatically fixes these compatibility issues in your installed package.
 
 **Core dependencies:**
 - TensorFlow 2.20+ (ML method)
-- PyDejavu 0.1.6 (fingerprinting method)
+- PyDejavu 0.1.3 (fingerprinting method, requires patching)
 - soundcard 0.4.5 (audio capture)
 - numpy, scipy (audio processing)
 - psycopg2-binary (PostgreSQL support)
