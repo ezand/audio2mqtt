@@ -199,6 +199,10 @@ python listen.py --device-id 1
 # Adjust confidence threshold (0.0-1.0, default: 0.7)
 python listen.py --threshold 0.8
 
+# Adjust window duration to match training audio length (default: 2.0s)
+python listen.py --window-duration 1.0  # for short sounds (0.5-1s)
+python listen.py --window-duration 3.0  # for longer sounds (2-3s)
+
 # Adjust energy threshold to filter silence/noise (default: -40 dB)
 python listen.py --energy-threshold -35  # less sensitive, only louder sounds
 python listen.py --energy-threshold -50  # more sensitive, quieter sounds
@@ -209,9 +213,14 @@ python listen.py --verbose
 # Microphone with verbose mode
 python listen.py --microphone --verbose
 
-# Combine options
-python listen.py --microphone --threshold 0.6 --energy-threshold -45 --verbose
+# Combine options for fine-tuning
+python listen.py --window-duration 1.5 --threshold 0.85 --energy-threshold -35 --verbose
 ```
+
+**Tuning Tips:**
+- **Window duration**: Should match your training audio length. Shorter windows = faster response but may miss long sounds. Longer windows = more context but slower response.
+- **Confidence threshold**: Increase (0.8-0.9) to reduce false positives, decrease (0.5-0.6) to catch more events.
+- **Energy threshold**: Increase (-30 to -35 dB) if detecting too much background noise, decrease (-45 to -50 dB) for quieter sounds.
 
 #### Output Examples
 
@@ -255,12 +264,14 @@ python listen.py --verbose
 
 - **Audio Source**: Captures from loopback device (system audio) or microphone
 - **Energy Gating**: Calculates RMS energy in dB, skips chunks below threshold (saves CPU, prevents false positives)
-- **Capture**: Records audio in 0.5 second chunks
-- **Ring Buffer**: Maintains 3-second history with sliding window
-- **Inference**: Processes 2-second windows with 50% overlap
-- **Per-Frame Classification**: Each frame (~0.48s) classified separately, not averaged
+- **Capture**: Records audio in 0.5 second chunks (configurable via `--chunk-duration`)
+- **Ring Buffer**: Maintains audio history with sliding window
+- **Inference**: Processes configurable window duration (default 2.0s, adjustable via `--window-duration`)
+- **Per-Frame Classification**: Each YAMNet frame (~0.48s) classified separately, not averaged
 - **Event Debouncing**: Prevents duplicate detections within 1 second
 - **Latency**: ~100-200ms from audio to detection
+
+**Important**: Set `--window-duration` to match your training audio length for optimal accuracy.
 
 #### Use Cases
 

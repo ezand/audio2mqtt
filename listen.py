@@ -115,6 +115,14 @@ Examples:
     )
 
     parser.add_argument(
+        '--window-duration',
+        type=float,
+        default=2.0,
+        help='Sliding window duration in seconds for classification (default: 2.0). '
+             'Should match your training audio length for best results.'
+    )
+
+    parser.add_argument(
         '--energy-threshold',
         type=float,
         default=-40.0,
@@ -172,6 +180,7 @@ Examples:
         classifier=classifier,
         class_names=class_names,
         chunk_duration=args.chunk_duration,
+        window_duration=args.window_duration,
         confidence_threshold=args.threshold,
         energy_threshold_db=args.energy_threshold,
         verbose=args.verbose

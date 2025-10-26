@@ -206,6 +206,7 @@ def start_listening(device,
                    classifier: tf.keras.Model,
                    class_names: List[str],
                    chunk_duration: float = 0.5,
+                   window_duration: float = 2.0,
                    confidence_threshold: float = 0.7,
                    energy_threshold_db: float = -40.0,
                    verbose: bool = False,
@@ -218,6 +219,7 @@ def start_listening(device,
         classifier: Trained classifier model.
         class_names: List of class names.
         chunk_duration: Duration of each audio chunk in seconds.
+        window_duration: Duration of sliding window for classification in seconds.
         confidence_threshold: Minimum confidence for event detection.
         energy_threshold_db: Minimum audio energy in dB to process.
         verbose: Enable verbose logging for audio detection.
@@ -232,6 +234,7 @@ def start_listening(device,
         classifier=classifier,
         class_names=class_names,
         sample_rate=sample_rate,
+        window_duration=window_duration,
         confidence_threshold=confidence_threshold,
         energy_threshold_db=energy_threshold_db,
         verbose=verbose
@@ -240,6 +243,7 @@ def start_listening(device,
     print(f"\nListening to: {device.name}")
     print(f"Sample rate: {sample_rate} Hz")
     print(f"Chunk duration: {chunk_duration}s ({chunk_size} samples)")
+    print(f"Window duration: {window_duration}s")
     print(f"Confidence threshold: {confidence_threshold}")
     print(f"Energy threshold: {energy_threshold_db} dB")
     if verbose:

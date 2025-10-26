@@ -36,9 +36,11 @@ python listen.py
 # Listen to microphone
 python listen.py --microphone
 
-# Adjust thresholds and enable verbose mode
-python listen.py --threshold 0.8 --energy-threshold -35 --verbose
+# Adjust window duration, thresholds, and enable verbose mode
+python listen.py --window-duration 1.5 --threshold 0.8 --energy-threshold -35 --verbose
 ```
+
+**Key parameter**: `--window-duration` should match training audio length for optimal accuracy.
 
 ### Generate Background Samples
 ```bash
@@ -127,6 +129,18 @@ Folder name = class label. `dataset.scan_training_directory()` automatically dis
 - Extracted eagerly in `train.py:extract_embeddings_from_dataset()` to avoid TensorFlow graph scope errors
 
 ## Critical Implementation Details
+
+### Window Duration Configuration
+**Critical for accuracy**: The sliding window duration (`--window-duration`) should match your training audio length.
+
+**Problem**: If training samples are 0.8s but window is 2.0s, then 60% of each analyzed window is non-target audio, diluting the signal and causing false positives.
+
+**Solution**:
+- Short sounds (0.5-1s): `--window-duration 1.0`
+- Medium sounds (1-2s): `--window-duration 1.5` or `2.0` (default)
+- Long sounds (2-3s): `--window-duration 3.0`
+
+Implemented in `listen.py` and `stream_classifier.py` with configurable window_duration parameter.
 
 ### Energy Gating (stream_classifier.py:69-87)
 RMS energy calculation in dB filters silence/noise before inference:
