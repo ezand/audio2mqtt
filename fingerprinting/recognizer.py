@@ -8,6 +8,7 @@ from typing import List, Dict, Optional
 import numpy as np
 
 from .engine import FingerprintEngine
+from .mqtt_client import MQTTPublisher
 
 
 class StreamRecognizer:
@@ -127,12 +128,11 @@ class StreamRecognizer:
                 'confidence': match['confidence'],
                 'song_name': match['song_name'],
                 'offset': match['offset'],
-                'hashes_matched': match['hashes_matched_in_input']
+                'hashes_matched_in_input': match.get('hashes_matched_in_input', 0),
+                'input_total_hashes': match.get('input_total_hashes', 0),
+                'hashes_matched': match.get('hashes_matched_in_input', 0),  # Alias for MQTT
+                'metadata': match.get('metadata', {})  # Always include metadata field
             }
-
-            # Add metadata if present
-            if 'metadata' in match:
-                detection['metadata'] = match['metadata']
 
             detections.append(detection)
 
@@ -219,7 +219,8 @@ def start_listening(device,
                    confidence_threshold: float = 0.3,
                    energy_threshold_db: float = -40.0,
                    verbose: bool = False,
-                   event_callback: Optional[callable] = None):
+                   event_callback: Optional[callable] = None,
+                   mqtt_publisher: Optional[MQTTPublisher] = None):
     """Start listening to audio device and recognize in real-time.
 
     Args:
@@ -231,6 +232,7 @@ def start_listening(device,
         energy_threshold_db: Minimum audio energy in dB to process.
         verbose: Enable verbose logging.
         event_callback: Optional callback function for detected events.
+        mqtt_publisher: Optional MQTT publisher for event publishing.
     """
     # Use Dejavu's default sample rate (44.1kHz)
     from dejavu import fingerprint
@@ -276,6 +278,9 @@ def start_listening(device,
                     for detection in detections:
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+                        # Add timestamp to detection
+                        detection['timestamp'] = timestamp
+
                         # Format output with metadata if available
                         metadata_str = ""
                         if 'metadata' in detection:
@@ -291,6 +296,11 @@ def start_listening(device,
                         print(f"[{timestamp}] Event detected: {detection['class']}{metadata_str} "
                               f"(confidence: {detection['confidence']:.2f})")
 
+                        # Publish to MQTT if publisher configured
+                        if mqtt_publisher:
+                            mqtt_publisher.publish_event(detection)
+
+                        # Call event callback if provided
                         if event_callback:
                             event_callback(detection)
 

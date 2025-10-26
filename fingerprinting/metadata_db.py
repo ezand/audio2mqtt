@@ -32,7 +32,8 @@ class MetadataDB:
             db_config: Database configuration dict from storage_config.
         """
         self.db_config = db_config
-        self.db_type_str = db_config.get('database', {}).get('type', 'memory')
+        # Get database_type from top level (Dejavu config format)
+        self.db_type_str = db_config.get('database_type', 'memory')
 
         # Determine database type
         if self.db_type_str == 'postgres':

@@ -9,6 +9,11 @@ pyaudio==0.2.14  # Required by PyDejavu (missing from its setup.py)
 psycopg2-binary==2.9.11
 librosa==0.11.0
 PyYAML==6.0.3
+pydub==0.25.1
+matplotlib==3.10.7
+
+# MQTT
+paho-mqtt==2.1.0
 
 # NOTE: After installing dependencies, run the patching script:
 #   python scripts/apply_patches.py

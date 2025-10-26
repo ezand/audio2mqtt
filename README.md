@@ -46,10 +46,10 @@ python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
 # 3. Start database and import fingerprints + metadata
 docker-compose up -d
-python import_fingerprint_files.py training/fingerprints/ --db-type postgresql
+python import_fingerprint_files.py training/fingerprints/ --config dev-config.yaml
 
-# 4. Listen in real-time with metadata
-python listen.py --db-type postgresql
+# 4. Listen in real-time with MQTT publishing
+python listen.py --config dev-config.yaml
 ```
 
 ## Documentation
@@ -57,6 +57,7 @@ python listen.py --db-type postgresql
 Detailed documentation:
 
 - **[Fingerprinting Guide](docs/fingerprinting.md)** - Complete guide (YAML metadata, fingerprint generation, database import, recognition)
+- **[MQTT Integration](docs/mqtt.md)** - Publish detection events to MQTT broker
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input
 
 ## Real-time Listening
@@ -131,6 +132,7 @@ python scripts/apply_patches.py
 
 - ✅ **Exact audio matching** - Shazam-like recognition with 96-100% accuracy
 - ✅ **Flexible metadata** - Store custom fields (game, song, artist, etc.) in JSONB
+- ✅ **MQTT publishing** - Publish detection events with metadata to MQTT topics
 - ✅ **Version-controlled fingerprints** - JSON files work independently of source audio
 - ✅ **Multiple database backends** - PostgreSQL, MySQL, or in-memory
 - ✅ **Real-time recognition** - Low latency (~100-200ms)

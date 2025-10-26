@@ -237,48 +237,50 @@ python register_fingerprints.py --clear --db-type postgresql
 
 **In-memory database (quick start):**
 ```bash
-python listen.py --method fingerprint
+python listen.py
 ```
 
 **With PostgreSQL:**
 ```bash
-python listen.py --method fingerprint --db-type postgresql
+python listen.py --db-type postgresql
 ```
 
-**With config file:**
+**With config file (enables MQTT publishing):**
 ```bash
-python listen.py --method fingerprint --config config.yaml
+python listen.py --config dev-config.yaml
 ```
+
+**Note**: Using a config file automatically enables MQTT publishing if MQTT settings are present. See [MQTT Integration](mqtt.md) for details.
 
 ### Advanced Options
 
 ```bash
 # Adjust window duration for short sounds (default: 2.0s)
-python listen.py --method fingerprint --window-duration 1.5
+python listen.py --window-duration 1.5
 
-# Lower confidence threshold for more sensitive matching (default: 0.3)
-python listen.py --method fingerprint --threshold 0.2
+# Lower confidence threshold for more sensitive matching (default: 0.5)
+python listen.py --threshold 0.3
 
 # Adjust energy threshold to filter silence/noise (default: -40 dB)
-python listen.py --method fingerprint --energy-threshold -35
+python listen.py --energy-threshold -35
 
 # Enable verbose mode to see matching details
-python listen.py --method fingerprint --verbose
+python listen.py --verbose
 
-# Combine options
-python listen.py --method fingerprint --window-duration 2.5 --threshold 0.25 --verbose --db-type postgresql
+# Combine options with config file (includes MQTT)
+python listen.py --config dev-config.yaml --window-duration 2.5 --threshold 0.4 --verbose
 ```
 
 ### Device Selection
 
 **Auto-select loopback device (system audio):**
 ```bash
-python listen.py --method fingerprint
+python listen.py
 ```
 
 **Microphone:**
 ```bash
-python listen.py --method fingerprint --microphone
+python listen.py --microphone
 ```
 
 **Specific device:**
@@ -287,10 +289,10 @@ python listen.py --method fingerprint --microphone
 python listen.py --list
 
 # By name
-python listen.py --method fingerprint --device "BlackHole"
+python listen.py --device "BlackHole"
 
 # By device ID
-python listen.py --method fingerprint --device-id 1
+python listen.py --device-id 1
 ```
 
 ### Tuning Tips
@@ -342,7 +344,7 @@ Statistics:
 
 **Verbose mode with metadata:**
 ```bash
-python listen.py --method fingerprint --verbose --db-type postgresql
+python listen.py --config dev-config.yaml --verbose
 
 [2025-10-26 03:15:41.234] Audio detected (energy: -32.1 dB) - fingerprinting...
   → No match (no confident fingerprint matches)
@@ -350,6 +352,8 @@ python listen.py --method fingerprint --verbose --db-type postgresql
   → Match: super_mario_world_underground [Super Mario World: Underground] @ 0.87 (hashes: 145/167)
 [2025-10-26 03:15:42] Event detected: super_mario_world_underground (game: Super Mario World, song: Underground) (confidence: 0.87)
 ```
+
+**Note**: Events are automatically published to MQTT when using a config file with MQTT settings. See [MQTT Integration](mqtt.md) for details.
 
 ## How It Works
 

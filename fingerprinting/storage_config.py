@@ -136,6 +136,19 @@ def load_recognition_config(config_path: str) -> Dict:
     }
 
 
+def load_full_config(config_path: str) -> Dict:
+    """Load full configuration from YAML file (including MQTT).
+
+    Args:
+        config_path: Path to YAML config file.
+
+    Returns:
+        Full configuration dictionary.
+    """
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+
 def load_config_from_file(config_path: str) -> Dict:
     """Load database configuration from YAML file.
 
