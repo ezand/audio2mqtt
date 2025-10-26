@@ -1,6 +1,6 @@
 """Transfer learning model for audio classification."""
 
-from typing import Tuple
+from typing import Tuple, List, Dict
 
 import tensorflow as tf
 
@@ -106,3 +106,38 @@ def predict_class(classifier: tf.keras.Model,
     confidence = probabilities.numpy()[0][predicted_idx]
 
     return class_names[predicted_idx], float(confidence)
+
+
+def predict_streaming(classifier: tf.keras.Model,
+                     embeddings: tf.Tensor,
+                     class_names: List[str],
+                     threshold: float = 0.7) -> List[Dict]:
+    """Predict on each embedding frame separately for streaming inference.
+
+    Args:
+        classifier: Trained classifier model.
+        embeddings: YAMNet embeddings tensor (num_frames, 1024).
+        class_names: List of class names.
+        threshold: Confidence threshold for detection.
+
+    Returns:
+        List of detection dictionaries with keys: frame, class, confidence, timestamp.
+    """
+    # Get predictions for all frames at once
+    predictions = classifier(embeddings)
+    probabilities = tf.nn.softmax(predictions)
+
+    detections = []
+    for i, probs in enumerate(probabilities.numpy()):
+        max_idx = probs.argmax()
+        confidence = probs[max_idx]
+
+        if confidence > threshold:
+            detections.append({
+                'frame': i,
+                'class': class_names[max_idx],
+                'confidence': float(confidence),
+                'timestamp': i * 0.48  # YAMNet frame duration ~0.48s
+            })
+
+    return detections

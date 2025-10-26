@@ -57,7 +57,7 @@ audio2mqtt/
 │       ├── death_002.wav
 │       └── ...
 ├── models/               # Saved trained models
-│   ├── classifier/       # Trained classifier
+│   ├── classifier.keras  # Trained classifier
 │   └── class_names.txt   # Class name mapping
 ├── audio_util.py         # Audio preprocessing utilities
 ├── class_map.py          # YAMNet class name loading
@@ -65,7 +65,10 @@ audio2mqtt/
 ├── dataset.py            # Training data loading
 ├── model.py              # Transfer learning model
 ├── train.py              # Training script
-└── main.py               # Classification script
+├── main.py               # Batch classification script
+├── audio_device.py       # Audio device discovery
+├── stream_classifier.py  # Real-time classification engine
+└── listen.py             # Real-time listening CLI
 ```
 
 ## Training Process
@@ -116,30 +119,83 @@ python train.py [training_dir] [output_dir]
 
 ## Classification
 
-### Base YAMNet (521 classes)
-Classify using pre-trained YAMNet:
+### Batch Classification
+
+**Base YAMNet (521 classes)**
 ```bash
 python main.py audio_file.wav
 ```
 
-Output shows the AudioSet class with highest confidence.
-
-### Custom Trained Model
-Classify using your trained model:
+**Custom Trained Model**
 ```bash
 python main.py audio_file.wav --custom
 ```
 
-Output shows:
-- Predicted custom class
-- Confidence score (0-100%)
+### Real-time Audio Stream Listening
+
+Listen to your computer's audio output in real-time and detect events as they happen.
+
+**Prerequisites:**
+Install a virtual audio loopback device:
+- **macOS**: [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free, open-source)
+- **Windows**: VB-CABLE or enable "Stereo Mix" in audio settings
+- **Linux**: PulseAudio monitor (usually built-in)
+
+**List available audio devices:**
+```bash
+python listen.py --list
+```
+
+**Start listening (auto-selects loopback device):**
+```bash
+python listen.py
+```
+
+**Select specific device:**
+```bash
+python listen.py --device "BlackHole"
+# or by device ID
+python listen.py --device-id 1
+```
+
+**Adjust confidence threshold:**
+```bash
+python listen.py --threshold 0.8
+```
+
+**Output example:**
+```
+Auto-selected loopback device: BlackHole 2ch
+Loading model: models/classifier.keras
+Listening... (Press Ctrl+C to stop)
+
+[2025-10-26 01:30:45] Event detected: mario_dies (confidence: 0.89)
+[2025-10-26 01:30:52] Event detected: mario_dies (confidence: 0.91)
+```
+
+**How it works:**
+- Captures audio in 0.5 second chunks
+- Maintains a 3-second ring buffer with sliding window
+- Processes 2-second windows with 50% overlap
+- Per-frame classification (not averaged)
+- Event debouncing prevents duplicate detections
+- ~100-200ms latency from audio to detection
 
 ## Utilities
 
 ### Convert Audio Files
-Convert directory of WAV files to YAMNet format (16kHz mono):
+Convert directory of audio files to YAMNet format (16kHz mono):
 ```bash
 python audio_util.py convert input_dir/ output_dir/
+```
+
+**Supported formats:** WAV, MP3, M4A, OGG, FLAC, AAC, WMA
+
+**Note:** Non-WAV formats require `pydub` and `ffmpeg`:
+```bash
+pip install pydub
+brew install ffmpeg  # macOS
+# or apt-get install ffmpeg  # Linux
 ```
 
 ## Model Details
@@ -207,10 +263,11 @@ Transfer learning with YAMNet requires:
 - Works best for sounds similar to AudioSet categories
 - May struggle with very domain-specific sounds
 - Single-label classification (one class per audio clip)
-- Requires entire audio clip (not real-time streaming)
+- Streaming mode requires loopback device for system audio capture
 
 ### Performance
-- **Inference**: ~100ms per audio file on CPU
+- **Batch Inference**: ~100ms per audio file on CPU
+- **Streaming Inference**: ~100-200ms latency from audio to detection
 - **Training**: ~1-2 minutes for 20 samples on CPU
 - **Model size**: ~5MB (classifier only, YAMNet not included)
 

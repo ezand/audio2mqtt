@@ -8,3 +8,4 @@ numpy==2.3.4
 pandas==2.3.3
 scipy==1.16.2
 pydub==0.25.1
+soundcard==0.4.5
