@@ -10,7 +10,7 @@ from audio_device import list_audio_devices, print_devices, select_device
 from stream_classifier import start_listening as start_listening_ml
 from yamnet_classifier import load_yamnet_model
 from fingerprinting.engine import FingerprintEngine
-from fingerprinting.storage_config import DatabaseType
+from fingerprinting.storage_config import DatabaseType, load_recognition_config
 from fingerprinting.recognizer import start_listening as start_listening_fingerprint
 
 
@@ -234,7 +234,7 @@ Note: For fingerprinting, register audio first:
         else:
             db_type = DatabaseType.MEMORY
 
-        # Initialize engine
+        # Initialize engine and load config
         try:
             if args.config:
                 print(f"Loading config from: {args.config}")
@@ -242,9 +242,27 @@ Note: For fingerprinting, register audio first:
                     print(f"Error: Config file not found: {args.config}")
                     sys.exit(1)
                 engine = FingerprintEngine(config_path=args.config)
+
+                # Load recognition config from file
+                recognition_config = load_recognition_config(args.config)
+
+                # Use config values if command-line args are defaults
+                # (user didn't explicitly override them)
+                parser_defaults = {
+                    'threshold': 0.7,
+                    'chunk_duration': 0.5,
+                    'window_duration': 2.0,
+                }
+
+                confidence_threshold = recognition_config['confidence_threshold'] if args.threshold == parser_defaults['threshold'] else args.threshold
+                chunk_duration = recognition_config['chunk_seconds'] if args.chunk_duration == parser_defaults['chunk_duration'] else args.chunk_duration
+                window_duration = args.window_duration  # No config equivalent yet
             else:
                 print(f"Using database type: {args.db_type}")
                 engine = FingerprintEngine(db_type=db_type)
+                confidence_threshold = args.threshold
+                chunk_duration = args.chunk_duration
+                window_duration = args.window_duration
         except Exception as e:
             print(f"Error initializing fingerprint engine: {e}")
             print("\nIf using PostgreSQL/MySQL, make sure the database is running.")
@@ -266,9 +284,9 @@ Note: For fingerprinting, register audio first:
         start_listening_fingerprint(
             device=device,
             engine=engine,
-            chunk_duration=args.chunk_duration,
-            window_duration=args.window_duration,
-            confidence_threshold=args.threshold,
+            chunk_duration=chunk_duration,
+            window_duration=window_duration,
+            confidence_threshold=confidence_threshold,
             energy_threshold_db=args.energy_threshold,
             verbose=args.verbose
         )

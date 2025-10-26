@@ -114,6 +114,28 @@ def get_mysql_config(host: Optional[str] = None,
     }
 
 
+def load_recognition_config(config_path: str) -> Dict:
+    """Load recognition settings from YAML config file.
+
+    Args:
+        config_path: Path to YAML config file.
+
+    Returns:
+        Dictionary with recognition settings (confidence_threshold, etc.)
+    """
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    fingerprint_config = config.get('fingerprint', {})
+    recognition_config = fingerprint_config.get('recognition', {})
+
+    return {
+        'confidence_threshold': recognition_config.get('confidence_threshold', 0.3),
+        'chunk_seconds': recognition_config.get('chunk_seconds', 2.0),
+        'overlap': recognition_config.get('overlap', 0.5),
+    }
+
+
 def load_config_from_file(config_path: str) -> Dict:
     """Load database configuration from YAML file.
 
