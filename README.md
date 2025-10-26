@@ -10,7 +10,9 @@
 
 **Real-time Audio Fingerprinting Recognition**
 
-Audio fingerprinting system for detecting specific audio events in real-time using Dejavu (like Shazam).
+Audio fingerprinting system for detecting specific audio events in real-time using Dejavu (like Shazam). Companion project to [retro2mqtt](https://github.com/ezand/retro2mqtt).
+
+**Integration with retro2mqtt**: Combines video game state detection (via [retro2mqtt](https://github.com/ezand/retro2mqtt)) with audio event recognition for complete home automation control. While retro2mqtt tracks game state through memory scanning, audio2mqtt detects audio cues (like level complete, game over, power-up sounds). Together they enable rich automations: trigger smart lights when Mario dies, send notifications on level completion, track gameplay stats, or control scenes based on in-game events. Perfect for streamers, home arcade setups, or anyone wanting their retro gaming to interact with their smart home.
 
 ## Overview
 
