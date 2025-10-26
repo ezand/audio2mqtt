@@ -10,543 +10,165 @@
 
 **Real-time Audio Recognition: ML & Fingerprinting**
 
-A dual-method audio recognition system supporting:
-- **ML (Machine Learning)**: YAMNet transfer learning for sound pattern recognition
-- **Fingerprinting**: Dejavu-based exact audio matching (like Shazam)
+A dual-method audio recognition system for detecting audio events in real-time:
+- **ML Method**: YAMNet transfer learning for sound pattern recognition and generalization
+- **Fingerprinting Method**: Dejavu-based exact audio matching (like Shazam)
 
-## Concepts
+## Overview
 
 ### Two Recognition Methods
 
+This system provides two distinct approaches for audio recognition, each optimized for different use cases:
+
 #### ML Method: YAMNet Transfer Learning
-YAMNet is a pre-trained deep neural network for audio event detection. It:
-- Uses MobileNetV1 architecture
-- Is trained on AudioSet (521 audio event classes)
-- Outputs 1,024-dimensional embeddings per audio frame
-- Expects 16kHz mono audio input
 
-**Transfer Learning Approach:**
-Instead of training a full audio classification model from scratch, we:
-1. **Use YAMNet as a frozen feature extractor** - Extract high-level audio features (embeddings)
-2. **Train a small classifier** - Learn to map embeddings to custom classes
-3. **Require minimal training data** - YAMNet already understands audio, we just teach it new categories
-
-This is efficient because:
-- YAMNet embeddings capture general audio features (pitch, timbre, rhythm)
-- Only the final classification layer needs training
-- Works with small datasets (20-50 samples per class)
-- **Best for**: Sound categories, generalization, variations of same sound
+Uses a pre-trained neural network (YAMNet) as a feature extractor, training only a small classifier on top:
+- **Best for**: Sound categories, pattern recognition, generalization to variations
+- **Setup**: Requires training with 20+ samples per class (5-10 minutes)
+- **Accuracy**: 70-95% depending on training data quality
+- **False positives**: Medium (5-15%) - can misclassify similar sounds
+- **Example use cases**: "Any dog bark", "any door slam", voice command categories
 
 #### Fingerprinting Method: Dejavu
-Audio fingerprinting creates unique "signatures" for exact audio matching (like Shazam). It:
-- Uses FFT (Fast Fourier Transform) to analyze frequency content
-- Identifies spectral peaks and creates hashes
-- Stores fingerprints in database (PostgreSQL/MySQL/in-memory)
-- Matches audio by comparing hash patterns
 
-**Fingerprinting Approach:**
-1. **Register reference audio** - Create fingerprints for known sounds
-2. **Store in database** - Persistent or in-memory storage
-3. **Match in real-time** - Compare incoming audio against database
+Creates unique audio "signatures" for exact matching (like Shazam):
+- **Best for**: Exact sound recognition, specific audio (game sounds, alerts, jingles)
+- **Setup**: Just register reference audio (instant)
+- **Accuracy**: 96-100% for exact matches
+- **False positives**: Near-zero (<1%) - requires exact or very similar audio
+- **Example use cases**: Game audio events, specific alerts, musical cues
 
-This is accurate because:
-- Exact matching eliminates false positives
-- No training required, just registration
-- Robust to background noise if reference is clear
-- 96% accuracy with 2-second clips, 100% with 5+ seconds
-- **Best for**: Exact sound recognition, short specific sounds (game audio, alerts)
+### Which Method Should I Use?
 
-### Architecture
+**Use ML if you want:**
+- Pattern recognition ("recognize any crying baby")
+- Generalization to variations of sounds
+- Sound categories rather than exact matches
+
+**Use Fingerprinting if you want:**
+- Exact sound matching ("recognize this specific mario death sound")
+- Near-zero false positives
+- Simple setup without training
+- Game audio, alerts, or jingles
+
+**Recommendation**: For specific sounds like game audio, use fingerprinting - it's simpler, more accurate, and eliminates false positives.
+
+## Quick Start
+
+### ML Method
+
+```bash
+# 1. Prepare training data
+mkdir -p training/mario_dies training/background
+# Add your audio samples to training/mario_dies/
+python generate_background.py synthetic training/background/ --num-samples 20
+
+# 2. Train model
+python train.py
+
+# 3. Listen in real-time
+python listen.py --method ml
 ```
-Audio Input (16kHz mono)
-    ↓
-YAMNet Model (frozen)
-    ↓
-Embeddings (1024-dim per frame)
-    ↓
-Custom Classifier
-  - Dense(512, relu)
-  - Dense(num_classes)
-    ↓
-Class Predictions
+
+### Fingerprinting Method
+
+```bash
+# 1. Start database (optional, can use in-memory)
+docker-compose up -d
+
+# 2. Register audio fingerprints
+python register_fingerprints.py training/ --by-class --db-type postgresql
+
+# 3. Listen in real-time
+python listen.py --method fingerprint --db-type postgresql
 ```
+
+## Documentation
+
+Detailed documentation for each component:
+
+- **[ML Method](docs/ml.md)** - YAMNet transfer learning guide (training, classification, real-time listening)
+- **[Fingerprinting Method](docs/fingerprinting.md)** - Dejavu fingerprinting guide (setup, registration, recognition)
+- **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input
+- **[Utilities](docs/utilities.md)** - Audio conversion, background sample generation, helper tools
+
+## Real-time Listening
+
+The `listen.py` script supports both methods with unified CLI:
+
+```bash
+# ML method (default)
+python listen.py --method ml
+
+# Fingerprinting method
+python listen.py --method fingerprint
+
+# Common options for both methods
+python listen.py --list                    # List audio devices
+python listen.py --microphone              # Use microphone instead of loopback
+python listen.py --device "BlackHole"      # Select specific device
+python listen.py --threshold 0.8           # Adjust confidence threshold
+python listen.py --window-duration 2.0     # Set analysis window size
+python listen.py --energy-threshold -40    # Filter silence/noise
+python listen.py --verbose                 # Show detailed output
+```
+
+See method-specific docs for detailed usage.
 
 ## Project Structure
 
 ```
 audio2mqtt/
-├── training/                   # Training data organized by class
-│   ├── mario_dies/            # Class name = folder name
-│   │   ├── death_001.wav
-│   │   ├── death_002.wav
-│   │   └── ...
-│   └── background/            # Background/negative samples (for ML)
-│       ├── noise_001.wav
-│       └── ...
-├── models/                    # Saved trained models (ML)
-│   ├── classifier.keras       # Trained classifier
-│   └── class_names.txt        # Class name mapping
+├── docs/                      # Documentation
+│   ├── ml.md                  # ML method guide
+│   ├── fingerprinting.md      # Fingerprinting method guide
+│   ├── setup.md               # Audio device setup
+│   └── utilities.md           # Helper tools
+├── training/                  # Training data (ML) or reference audio (fingerprinting)
+│   ├── class_name/            # Audio samples organized by class
+│   └── background/            # Background/negative samples (ML only)
+├── models/                    # Trained models (ML only)
+│   ├── classifier.keras
+│   └── class_names.txt
 ├── fingerprinting/            # Fingerprinting module
-│   ├── __init__.py
 │   ├── engine.py              # Dejavu wrapper
-│   ├── recognizer.py          # Real-time stream recognition
+│   ├── recognizer.py          # Real-time recognition
 │   └── storage_config.py      # Database configuration
-├── audio_util.py              # Audio preprocessing utilities
-├── class_map.py               # YAMNet class name loading
-├── yamnet_classifier.py       # YAMNet inference functions
-├── dataset.py                 # Training data loading (ML)
-├── model.py                   # Transfer learning model (ML)
-├── train.py                   # Training script (ML)
-├── main.py                    # Batch classification script (ML)
-├── audio_device.py            # Audio device discovery
-├── stream_classifier.py       # Real-time classification engine (ML)
 ├── listen.py                  # Real-time listening CLI (both methods)
-├── register_fingerprints.py   # Fingerprint registration CLI
+├── train.py                   # Training script (ML)
+├── register_fingerprints.py   # Registration CLI (fingerprinting)
 ├── generate_background.py     # Background sample generation (ML)
-├── docker-compose.yml         # PostgreSQL database setup
+├── audio_util.py              # Audio preprocessing
 └── config.yaml.example        # Configuration template
 ```
 
-## Training Process
-
-### 1. Prepare Training Data
-Organize audio files by class in the `training/` directory:
-```
-training/
-├── mario_dies/
-│   ├── sample1.wav
-│   ├── sample2.wav
-│   └── ...
-├── coin_sound/
-│   └── ...
-├── jump_sound/
-│   └── ...
-└── background/         # IMPORTANT: Add background class
-    ├── noise_001.wav
-    └── ...
-```
-
-**Requirements:**
-- 16kHz mono WAV files (will be auto-converted if different)
-- 20+ samples per class recommended
-- Folder name becomes the class label
-- **At least 2 classes required** (including background/negative samples)
-
-**Generate background samples:**
-```bash
-# Generate synthetic noise (white, pink, brown, silence)
-python generate_background.py synthetic training/background/ --num-samples 20
-
-# Or extract from ambient audio
-python generate_background.py extract ambient.mp3 training/background/ --num-segments 30
-```
-
-### 2. Run Training
-```bash
-python train.py [training_dir] [output_dir]
-```
-
-**What happens:**
-1. Scans `training/` directory for class folders
-2. Loads YAMNet model
-3. Extracts embeddings from all training audio (batched)
-4. Builds classifier with Dense layers
-5. Trains classifier on embeddings for 50 epochs
-6. Saves trained model to `models/classifier/`
-7. Saves class names to `models/class_names.txt`
-
-**Training output:**
-- Model accuracy per epoch
-- Final training accuracy
-- Saved model location
-
-### 3. Why This Works
-- **YAMNet embeddings are time-distributed**: Each ~0.48s of audio generates an embedding frame
-- **Averaging embeddings**: We average across time to get one prediction per file (batch mode)
-- **Data augmentation effect**: Multiple frames per file effectively increases training samples
-- **Multi-class discrimination**: Model learns to distinguish between your classes by comparing their embeddings
-- **Background class critical**: Without negative samples, softmax has no alternative and always outputs 100% confidence for the only class
-
-## Classification
-
-### Batch Classification
-
-**Base YAMNet (521 classes)**
-```bash
-python main.py audio_file.wav
-```
-
-**Custom Trained Model**
-```bash
-python main.py audio_file.wav --custom
-```
-
-### Real-time Audio Stream Listening
-
-Listen to audio in real-time and detect events as they happen. Supports both **system audio** (via loopback) and **microphone** input.
-
-#### Prerequisites
-
-**For System Audio (Loopback):**
-- **macOS**: [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free, open-source)
-  - Install BlackHole 2ch
-  - Create Multi-Output Device in Audio MIDI Setup with your speakers + BlackHole
-  - Set system output to Multi-Output Device
-- **Windows**: VB-CABLE or enable "Stereo Mix" in audio settings
-- **Linux**: PulseAudio monitor (usually built-in)
-
-**For Microphone:**
-- No additional setup needed - uses built-in microphone
-
-#### Basic Usage
-
-**List available audio devices:**
-```bash
-python listen.py --list
-```
-
-**Listen to system audio (auto-selects loopback device):**
-```bash
-python listen.py
-```
-
-**Listen to microphone:**
-```bash
-python listen.py --microphone
-```
-
-**Select specific device:**
-```bash
-# By name (substring match)
-python listen.py --device "BlackHole"
-python listen.py --device "MacBook Pro Microphone"
-
-# By device ID from --list
-python listen.py --device-id 1
-```
-
-#### Advanced Options
-
-```bash
-# Adjust confidence threshold (0.0-1.0, default: 0.7)
-python listen.py --threshold 0.8
-
-# Adjust window duration to match training audio length (default: 2.0s)
-python listen.py --window-duration 1.0  # for short sounds (0.5-1s)
-python listen.py --window-duration 3.0  # for longer sounds (2-3s)
-
-# Adjust energy threshold to filter silence/noise (default: -40 dB)
-python listen.py --energy-threshold -35  # less sensitive, only louder sounds
-python listen.py --energy-threshold -50  # more sensitive, quieter sounds
-
-# Enable verbose logging (shows audio detection and non-matches)
-python listen.py --verbose
-
-# Microphone with verbose mode
-python listen.py --microphone --verbose
-
-# Combine options for fine-tuning
-python listen.py --window-duration 1.5 --threshold 0.85 --energy-threshold -35 --verbose
-```
-
-**Tuning Tips:**
-- **Window duration**: Should match your training audio length. Shorter windows = faster response but may miss long sounds. Longer windows = more context but slower response.
-- **Confidence threshold**: Increase (0.8-0.9) to reduce false positives, decrease (0.5-0.6) to catch more events.
-- **Energy threshold**: Increase (-30 to -35 dB) if detecting too much background noise, decrease (-45 to -50 dB) for quieter sounds.
-
-#### Output Examples
-
-**System audio (loopback):**
-```
-Auto-selected loopback device: BlackHole 2ch
-Loading model: models/classifier.keras
-Listening... (Press Ctrl+C to stop)
-
-[2025-10-26 01:30:45] Event detected: mario_dies (confidence: 0.89)
-[2025-10-26 01:30:52] Event detected: mario_dies (confidence: 0.91)
-
-^C
-Statistics:
-  Total chunks: 1250
-  Processed chunks: 45
-  Skipped (silent): 1205
-  Total detections: 2
-```
-
-**Microphone:**
-```
-Auto-selected microphone: MacBook Pro Microphone
-Loading model: models/classifier.keras
-Listening... (Press Ctrl+C to stop)
-
-[2025-10-26 01:31:15] Event detected: mario_dies (confidence: 0.92)
-```
-
-**Verbose mode output:**
-```bash
-python listen.py --verbose
-
-[2025-10-26 01:30:45.123] Audio detected (energy: -32.1 dB) - processing...
-  → No match (best: mario_dies @ 0.45, threshold: 0.7)
-[2025-10-26 01:30:46.234] Audio detected (energy: -28.5 dB) - processing...
-[2025-10-26 01:30:46] Event detected: mario_dies (confidence: 0.89)
-```
-
-#### How It Works
-
-- **Audio Source**: Captures from loopback device (system audio) or microphone
-- **Energy Gating**: Calculates RMS energy in dB, skips chunks below threshold (saves CPU, prevents false positives)
-- **Capture**: Records audio in 0.5 second chunks (configurable via `--chunk-duration`)
-- **Ring Buffer**: Maintains audio history with sliding window
-- **Inference**: Processes configurable window duration (default 2.0s, adjustable via `--window-duration`)
-- **Per-Frame Classification**: Each YAMNet frame (~0.48s) classified separately, not averaged
-- **Event Debouncing**: Prevents duplicate detections within 1 second
-- **Latency**: ~100-200ms from audio to detection
-
-**Important**: Set `--window-duration` to match your training audio length for optimal accuracy.
-
-#### Use Cases
-
-**System Audio (Loopback):**
-- Detect events in games, videos, or any computer audio output
-- Monitor streaming audio for specific sounds
-- Trigger actions based on application audio
-
-**Microphone:**
-- Detect real-world environmental sounds
-- Voice command recognition (with appropriate training data)
-- Home automation based on ambient audio events
-
-## Fingerprinting Method
-
-The fingerprinting method uses Dejavu for exact audio matching - ideal for recognizing specific sounds like game audio, alerts, or jingles.
-
-### Setup
-
-**1. Start PostgreSQL database (recommended for persistence):**
-```bash
-docker-compose up -d
-```
-
-**2. Copy and configure settings:**
-```bash
-cp config.yaml.example config.yaml
-# Edit config.yaml with your database credentials
-```
-
-**Or use in-memory database** (no persistence, development only):
-```bash
-# No setup needed, just use --db-type memory
-```
-
-### Register Audio Fingerprints
-
-**Register by class** (recommended for organized sounds):
-```bash
-# Register all audio in training/ directory (training/class_name/*.wav)
-python register_fingerprints.py training/ --by-class
-
-# With PostgreSQL
-python register_fingerprints.py training/ --by-class --db-type postgresql
-```
-
-**Register flat directory:**
-```bash
-# Register all audio files in a single directory
-python register_fingerprints.py audio_samples/
-```
-
-**List registered fingerprints:**
-```bash
-python register_fingerprints.py --list
-```
-
-**Clear all fingerprints:**
-```bash
-python register_fingerprints.py --clear
-```
-
-### Real-time Recognition
-
-**Basic usage** (in-memory database):
-```bash
-python listen.py --method fingerprint
-```
-
-**With PostgreSQL:**
-```bash
-python listen.py --method fingerprint --db-type postgresql
-```
-
-**With config file:**
-```bash
-python listen.py --method fingerprint --config config.yaml
-```
-
-**Advanced options:**
-```bash
-# Adjust window duration for short sounds
-python listen.py --method fingerprint --window-duration 1.5
-
-# Lower confidence threshold (more sensitive)
-python listen.py --method fingerprint --threshold 0.2
-
-# Verbose mode to see matching details
-python listen.py --method fingerprint --verbose
-```
-
-### Output Example
-
-```
-Method: Fingerprinting (Dejavu)
-Using database type: postgresql
-Found 45 registered fingerprints in database
-
-Listening to: BlackHole 2ch
-Method: Fingerprinting
-Sample rate: 16000 Hz
-Window duration: 2.0s
-Confidence threshold: 0.3
-
-[2025-10-26 03:15:42] Event detected: mario_dies (confidence: 0.87)
-[2025-10-26 03:15:49] Event detected: mario_dies (confidence: 0.91)
-```
-
-### Method Comparison
+## Method Comparison
 
 | Feature | ML (YAMNet) | Fingerprinting (Dejavu) |
 |---------|-------------|------------------------|
-| **Training** | Requires training with positive + negative samples | Just register reference audio |
-| **Generalization** | Learns patterns, recognizes variations | Exact matching only |
-| **Accuracy** | Can have false positives with similar sounds | Near-zero false positives |
-| **Best for** | Sound categories, pattern recognition | Exact sounds, game audio, alerts |
-| **Setup** | Train model (5-10 min) | Register fingerprints (instant) |
+| **Best for** | Sound categories, pattern recognition | Exact sounds, specific audio |
+| **Setup** | Train model (5-10 min) | Register audio (instant) |
+| **Accuracy** | 70-95% | 96-100% |
+| **False positives** | Medium (5-15%) | Near-zero (<1%) |
+| **Generalization** | Yes - recognizes variations | No - exact matches only |
+| **Training data** | 20+ samples per class + background | Reference audio only |
 | **Database** | Not required | PostgreSQL/MySQL recommended |
-| **Window size** | Sensitive to mismatch with training data | Flexible, 2s+ recommended |
 
-**Recommendation**: For game sounds like "mario_dies", **use fingerprinting** - it's more accurate, simpler, and eliminates false positives.
+## Requirements
 
-## Utilities
-
-### Generate Background Samples
-
-**Important:** Training with only 1 class causes the model to always output 100% confidence regardless of input. You need at least 2 classes (target + background) for the model to learn discrimination.
-
-Generate background/negative samples to improve model accuracy:
-
-**Generate synthetic noise samples:**
 ```bash
-# Creates white, pink, brown noise + silence samples
-python generate_background.py synthetic training/background/ --num-samples 20
+pip install -r requirements.txt
 ```
 
-**Extract random segments from audio:**
-```bash
-# Extract 30 random 2-second segments from a podcast/music file
-python generate_background.py extract podcast.mp3 training/background/ --num-segments 30
-```
+**Core dependencies:**
+- TensorFlow 2.20+ (ML method)
+- PyDejavu 0.1.6 (fingerprinting method)
+- soundcard 0.4.5 (audio capture)
+- numpy, scipy (audio processing)
+- psycopg2-binary (PostgreSQL support)
 
-**Combine both approaches for best results:**
-```bash
-# 10 synthetic samples of each noise type (40 total)
-python generate_background.py synthetic training/background/ --num-samples 10
-
-# 20 segments from ambient audio
-python generate_background.py extract ambient_sounds.mp3 training/background/ --num-segments 20
-```
-
-After generating background samples, retrain your model:
-```bash
-python train.py training/ models/
-```
-
-### Convert Audio Files
-Convert directory of audio files to YAMNet format (16kHz mono):
-```bash
-python audio_util.py convert input_dir/ output_dir/
-```
-
-**Supported formats:** WAV, MP3, M4A, OGG, FLAC, AAC, WMA
-
-**Note:** Non-WAV formats require `pydub` and `ffmpeg`:
-```bash
-pip install pydub
-brew install ffmpeg  # macOS
-# or apt-get install ffmpeg  # Linux
-```
-
-## Model Details
-
-### Classifier Architecture
-```python
-Sequential([
-    Input(shape=(1024,)),      # YAMNet embedding
-    Dense(512, activation='relu'),
-    Dense(num_classes)          # Logits output
-])
-```
-
-### Training Configuration
-- **Loss**: SparseCategoricalCrossentropy (multi-class)
-- **Optimizer**: Adam (default learning rate)
-- **Metrics**: Accuracy
-- **Epochs**: 50 (configurable in train.py)
-- **Batch size**: 32 embeddings (configurable)
-
-### Inference Pipeline
-1. Load audio file → 16kHz mono waveform
-2. Pass through YAMNet → Extract embeddings
-3. Average embeddings across time → Single 1024-dim vector
-4. Pass through classifier → Get logits
-5. Softmax → Convert to probabilities
-6. Argmax → Get predicted class
-
-## Extending the System
-
-### Add More Classes
-1. Create new folder in `training/` with class name
-2. Add WAV files to folder
-3. Re-run `python train.py`
-
-### Improve Accuracy
-- Add more training samples per class
-- Ensure audio quality (minimal background noise)
-- Use data augmentation (pitch shift, time stretch)
-- Adjust classifier architecture in `model.py`
-- Increase training epochs in `train.py`
-
-### Export for Production
-The trained classifier is a standard Keras model and can be:
-- Converted to TensorFlow Lite for mobile/edge deployment
-- Served via TensorFlow Serving
-- Exported to ONNX for other frameworks
-
-## Technical Notes
-
-### Why Transfer Learning?
-Training a full audio model from scratch requires:
-- 100,000+ labeled samples
-- Days of GPU training time
-- Complex data augmentation
-- Expertise in audio ML
-
-Transfer learning with YAMNet requires:
-- 20+ samples per class
-- Minutes of CPU training time
-- Minimal preprocessing
-- Straightforward implementation
-
-### Limitations
-- Works best for sounds similar to AudioSet categories
-- May struggle with very domain-specific sounds
-- Single-label classification (one class per audio clip)
-- Streaming mode requires loopback device for system audio capture
-
-### Performance
-- **Batch Inference**: ~100ms per audio file on CPU
-- **Streaming Inference**: ~100-200ms latency from audio to detection
-- **Training**: ~1-2 minutes for 20 samples on CPU
-- **Model size**: ~5MB (classifier only, YAMNet not included)
+**Optional:**
+- pydub + ffmpeg (multi-format audio conversion)
 
 ## License
 
