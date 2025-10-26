@@ -51,8 +51,11 @@ Examples:
   # List available audio devices
   python listen.py --list
 
-  # Auto-select loopback device and start listening
+  # Auto-select loopback device (system audio)
   python listen.py
+
+  # Listen to microphone instead of system audio
+  python listen.py --microphone
 
   # Select specific device by name
   python listen.py --device "BlackHole"
@@ -60,8 +63,8 @@ Examples:
   # Select device by ID with custom threshold
   python listen.py --device-id 1 --threshold 0.8
 
-  # Use custom model
-  python listen.py --model models/classifier.keras --classes models/class_names.txt
+  # Use custom model with verbose mode
+  python listen.py --model models/classifier.keras --verbose
         """
     )
 
@@ -124,6 +127,12 @@ Examples:
         help='Enable verbose logging (shows audio detection and non-matches)'
     )
 
+    parser.add_argument(
+        '--microphone',
+        action='store_true',
+        help='Listen to microphone instead of loopback device'
+    )
+
     args = parser.parse_args()
 
     # List devices and exit
@@ -144,13 +153,16 @@ Examples:
     device = select_device(
         device_id=args.device_id,
         device_name=args.device,
-        auto_select_loopback=True
+        auto_select_loopback=not args.microphone,
+        prefer_microphone=args.microphone
     )
 
     if device is None:
         print("\nNo suitable audio device found.")
         print("Use --list to see available devices.")
         print("Use --device or --device-id to select a specific device.")
+        if args.microphone:
+            print("Or remove --microphone flag to use loopback device.")
         sys.exit(1)
 
     # Start listening

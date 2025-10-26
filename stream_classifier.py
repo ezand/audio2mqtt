@@ -249,26 +249,35 @@ def start_listening(device,
     try:
         with device.recorder(samplerate=sample_rate, channels=1) as recorder:
             while True:
-                # Record chunk
-                audio_chunk = recorder.record(numframes=chunk_size)
+                try:
+                    # Record chunk
+                    audio_chunk = recorder.record(numframes=chunk_size)
 
-                # Flatten to 1D if needed
-                if audio_chunk.ndim > 1:
-                    audio_chunk = audio_chunk.mean(axis=1)
+                    # Flatten to 1D if needed
+                    if audio_chunk.ndim > 1:
+                        audio_chunk = audio_chunk.mean(axis=1)
 
-                # Process chunk
-                detections = stream_classifier.process_chunk(audio_chunk)
+                    # Process chunk
+                    detections = stream_classifier.process_chunk(audio_chunk)
 
-                # Handle detections
-                for detection in detections:
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(f"[{timestamp}] Event detected: {detection['class']} "
-                          f"(confidence: {detection['confidence']:.2f})")
+                    # Handle detections
+                    for detection in detections:
+                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        print(f"[{timestamp}] Event detected: {detection['class']} "
+                              f"(confidence: {detection['confidence']:.2f})")
 
-                    if event_callback:
-                        event_callback(detection)
+                        if event_callback:
+                            event_callback(detection)
+
+                except KeyboardInterrupt:
+                    # Break out of inner loop on Ctrl+C
+                    break
 
     except KeyboardInterrupt:
+        # Catch any KeyboardInterrupt that happens outside the recording loop
+        pass
+    finally:
+        # Always print statistics
         print("\n\nStopping listener...")
         stats = stream_classifier.get_stats()
         print(f"\nStatistics:")

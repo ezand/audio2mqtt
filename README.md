@@ -133,32 +133,50 @@ python main.py audio_file.wav --custom
 
 ### Real-time Audio Stream Listening
 
-Listen to your computer's audio output in real-time and detect events as they happen.
+Listen to audio in real-time and detect events as they happen. Supports both **system audio** (via loopback) and **microphone** input.
 
-**Prerequisites:**
-Install a virtual audio loopback device:
+#### Prerequisites
+
+**For System Audio (Loopback):**
 - **macOS**: [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free, open-source)
+  - Install BlackHole 2ch
+  - Create Multi-Output Device in Audio MIDI Setup with your speakers + BlackHole
+  - Set system output to Multi-Output Device
 - **Windows**: VB-CABLE or enable "Stereo Mix" in audio settings
 - **Linux**: PulseAudio monitor (usually built-in)
+
+**For Microphone:**
+- No additional setup needed - uses built-in microphone
+
+#### Basic Usage
 
 **List available audio devices:**
 ```bash
 python listen.py --list
 ```
 
-**Start listening (auto-selects loopback device):**
+**Listen to system audio (auto-selects loopback device):**
 ```bash
 python listen.py
 ```
 
+**Listen to microphone:**
+```bash
+python listen.py --microphone
+```
+
 **Select specific device:**
 ```bash
+# By name (substring match)
 python listen.py --device "BlackHole"
-# or by device ID
+python listen.py --device "MacBook Pro Microphone"
+
+# By device ID from --list
 python listen.py --device-id 1
 ```
 
-**Advanced options:**
+#### Advanced Options
+
 ```bash
 # Adjust confidence threshold (0.0-1.0, default: 0.7)
 python listen.py --threshold 0.8
@@ -170,11 +188,16 @@ python listen.py --energy-threshold -50  # more sensitive, quieter sounds
 # Enable verbose logging (shows audio detection and non-matches)
 python listen.py --verbose
 
+# Microphone with verbose mode
+python listen.py --microphone --verbose
+
 # Combine options
-python listen.py --verbose --threshold 0.6 --energy-threshold -45
+python listen.py --microphone --threshold 0.6 --energy-threshold -45 --verbose
 ```
 
-**Output example:**
+#### Output Examples
+
+**System audio (loopback):**
 ```
 Auto-selected loopback device: BlackHole 2ch
 Loading model: models/classifier.keras
@@ -183,11 +206,21 @@ Listening... (Press Ctrl+C to stop)
 [2025-10-26 01:30:45] Event detected: mario_dies (confidence: 0.89)
 [2025-10-26 01:30:52] Event detected: mario_dies (confidence: 0.91)
 
+^C
 Statistics:
   Total chunks: 1250
   Processed chunks: 45
   Skipped (silent): 1205
   Total detections: 2
+```
+
+**Microphone:**
+```
+Auto-selected microphone: MacBook Pro Microphone
+Loading model: models/classifier.keras
+Listening... (Press Ctrl+C to stop)
+
+[2025-10-26 01:31:15] Event detected: mario_dies (confidence: 0.92)
 ```
 
 **Verbose mode output:**
@@ -200,14 +233,28 @@ python listen.py --verbose
 [2025-10-26 01:30:46] Event detected: mario_dies (confidence: 0.89)
 ```
 
-**How it works:**
-- **Energy gating**: Calculates RMS energy in dB, skips chunks below threshold (saves CPU, prevents false positives)
-- **Captures audio** in 0.5 second chunks
-- **Ring buffer**: Maintains 3-second history with sliding window
+#### How It Works
+
+- **Audio Source**: Captures from loopback device (system audio) or microphone
+- **Energy Gating**: Calculates RMS energy in dB, skips chunks below threshold (saves CPU, prevents false positives)
+- **Capture**: Records audio in 0.5 second chunks
+- **Ring Buffer**: Maintains 3-second history with sliding window
 - **Inference**: Processes 2-second windows with 50% overlap
-- **Per-frame classification**: Each frame (~0.48s) classified separately, not averaged
-- **Event debouncing**: Prevents duplicate detections within 1 second
+- **Per-Frame Classification**: Each frame (~0.48s) classified separately, not averaged
+- **Event Debouncing**: Prevents duplicate detections within 1 second
 - **Latency**: ~100-200ms from audio to detection
+
+#### Use Cases
+
+**System Audio (Loopback):**
+- Detect events in games, videos, or any computer audio output
+- Monitor streaming audio for specific sounds
+- Trigger actions based on application audio
+
+**Microphone:**
+- Detect real-world environmental sounds
+- Voice command recognition (with appropriate training data)
+- Home automation based on ambient audio events
 
 ## Utilities
 

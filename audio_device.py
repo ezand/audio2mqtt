@@ -89,15 +89,49 @@ def find_loopback_device(devices: List[Dict]) -> Optional[Dict]:
     return None
 
 
+def find_microphone_device(devices: List[Dict]) -> Optional[Dict]:
+    """Find first real microphone device (not loopback).
+
+    Args:
+        devices: List of device dictionaries from list_audio_devices().
+
+    Returns:
+        Device dictionary if found, None otherwise.
+    """
+    # Microphone name patterns
+    mic_patterns = ['microphone', 'mic', 'input', 'built-in']
+
+    for device in devices:
+        # Skip if it's a loopback device
+        if device.get('is_loopback', False):
+            continue
+
+        device_name_lower = device['name'].lower()
+
+        # Check for microphone patterns
+        for pattern in mic_patterns:
+            if pattern in device_name_lower:
+                return device
+
+    # If no pattern match, return first non-loopback device
+    for device in devices:
+        if not device.get('is_loopback', False):
+            return device
+
+    return None
+
+
 def select_device(device_id: Optional[int] = None,
                  device_name: Optional[str] = None,
-                 auto_select_loopback: bool = True) -> Optional[Any]:
+                 auto_select_loopback: bool = True,
+                 prefer_microphone: bool = False) -> Optional[Any]:
     """Select audio device for recording.
 
     Args:
         device_id: Device ID from list_audio_devices().
         device_name: Device name (substring match, case-insensitive).
         auto_select_loopback: If no device specified, auto-select loopback device.
+        prefer_microphone: If True, auto-select microphone instead of loopback.
 
     Returns:
         Microphone object if found, None otherwise.
@@ -127,6 +161,18 @@ def select_device(device_id: Optional[int] = None,
 
         print(f"Error: No device found matching '{device_name}'")
         return None
+
+    # Auto-select microphone
+    if prefer_microphone:
+        mic_device = find_microphone_device(devices)
+        if mic_device:
+            microphones = sc.all_microphones(include_loopback=True)
+            selected = microphones[mic_device['id']]
+            print(f"\nAuto-selected microphone: {selected.name}")
+            return selected
+        else:
+            print("\nWarning: No microphone device found.")
+            return None
 
     # Auto-select loopback
     if auto_select_loopback:
@@ -176,14 +222,22 @@ def main():
     print_devices(devices)
 
     loopback = find_loopback_device(devices)
+    microphone = find_microphone_device(devices)
+
+    print("\nAuto-detection results:")
     if loopback:
-        print(f"\n✓ Found loopback device: {loopback['name']}")
+        print(f"  ✓ Loopback device: {loopback['name']}")
     else:
-        print("\n✗ No loopback device found")
-        print("\nTo enable system audio capture:")
-        print("  macOS: Install BlackHole (https://github.com/ExistentialAudio/BlackHole)")
-        print("  Windows: Enable 'Stereo Mix' or install VB-CABLE")
-        print("  Linux: Use PulseAudio monitor")
+        print("  ✗ No loopback device found")
+        print("    To enable system audio capture:")
+        print("      macOS: Install BlackHole (https://github.com/ExistentialAudio/BlackHole)")
+        print("      Windows: Enable 'Stereo Mix' or install VB-CABLE")
+        print("      Linux: Use PulseAudio monitor")
+
+    if microphone:
+        print(f"  ✓ Microphone device: {microphone['name']}")
+    else:
+        print("  ✗ No microphone device found")
 
 
 if __name__ == "__main__":
