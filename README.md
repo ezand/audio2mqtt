@@ -51,24 +51,28 @@ Class Predictions
 
 ```
 audio2mqtt/
-├── training/              # Training data organized by class
-│   └── mario_dies/       # Class name = folder name
-│       ├── death_001.wav
-│       ├── death_002.wav
+├── training/                # Training data organized by class
+│   ├── mario_dies/         # Class name = folder name
+│   │   ├── death_001.wav
+│   │   ├── death_002.wav
+│   │   └── ...
+│   └── background/         # Background/negative samples (recommended)
+│       ├── noise_001.wav
 │       └── ...
-├── models/               # Saved trained models
-│   ├── classifier.keras  # Trained classifier
-│   └── class_names.txt   # Class name mapping
-├── audio_util.py         # Audio preprocessing utilities
-├── class_map.py          # YAMNet class name loading
-├── yamnet_classifier.py  # YAMNet inference functions
-├── dataset.py            # Training data loading
-├── model.py              # Transfer learning model
-├── train.py              # Training script
-├── main.py               # Batch classification script
-├── audio_device.py       # Audio device discovery
-├── stream_classifier.py  # Real-time classification engine
-└── listen.py             # Real-time listening CLI
+├── models/                 # Saved trained models
+│   ├── classifier.keras    # Trained classifier
+│   └── class_names.txt     # Class name mapping
+├── audio_util.py           # Audio preprocessing utilities
+├── class_map.py            # YAMNet class name loading
+├── yamnet_classifier.py    # YAMNet inference functions
+├── dataset.py              # Training data loading
+├── model.py                # Transfer learning model
+├── train.py                # Training script
+├── main.py                 # Batch classification script
+├── audio_device.py         # Audio device discovery
+├── stream_classifier.py    # Real-time classification engine
+├── listen.py               # Real-time listening CLI
+└── generate_background.py  # Background sample generation utility
 ```
 
 ## Training Process
@@ -83,7 +87,10 @@ training/
 │   └── ...
 ├── coin_sound/
 │   └── ...
-└── jump_sound/
+├── jump_sound/
+│   └── ...
+└── background/         # IMPORTANT: Add background class
+    ├── noise_001.wav
     └── ...
 ```
 
@@ -91,6 +98,16 @@ training/
 - 16kHz mono WAV files (will be auto-converted if different)
 - 20+ samples per class recommended
 - Folder name becomes the class label
+- **At least 2 classes required** (including background/negative samples)
+
+**Generate background samples:**
+```bash
+# Generate synthetic noise (white, pink, brown, silence)
+python generate_background.py synthetic training/background/ --num-samples 20
+
+# Or extract from ambient audio
+python generate_background.py extract ambient.mp3 training/background/ --num-segments 30
+```
 
 ### 2. Run Training
 ```bash
@@ -112,10 +129,11 @@ python train.py [training_dir] [output_dir]
 - Saved model location
 
 ### 3. Why This Works
-- **YAMNet embeddings are time-distributed**: Each ~1 second of audio generates multiple embedding frames
-- **Averaging embeddings**: We average across time to get one prediction per file
+- **YAMNet embeddings are time-distributed**: Each ~0.48s of audio generates an embedding frame
+- **Averaging embeddings**: We average across time to get one prediction per file (batch mode)
 - **Data augmentation effect**: Multiple frames per file effectively increases training samples
-- **No negative samples needed**: Multi-class classification learns to distinguish between your classes
+- **Multi-class discrimination**: Model learns to distinguish between your classes by comparing their embeddings
+- **Background class critical**: Without negative samples, softmax has no alternative and always outputs 100% confidence for the only class
 
 ## Classification
 
@@ -257,6 +275,38 @@ python listen.py --verbose
 - Home automation based on ambient audio events
 
 ## Utilities
+
+### Generate Background Samples
+
+**Important:** Training with only 1 class causes the model to always output 100% confidence regardless of input. You need at least 2 classes (target + background) for the model to learn discrimination.
+
+Generate background/negative samples to improve model accuracy:
+
+**Generate synthetic noise samples:**
+```bash
+# Creates white, pink, brown noise + silence samples
+python generate_background.py synthetic training/background/ --num-samples 20
+```
+
+**Extract random segments from audio:**
+```bash
+# Extract 30 random 2-second segments from a podcast/music file
+python generate_background.py extract podcast.mp3 training/background/ --num-segments 30
+```
+
+**Combine both approaches for best results:**
+```bash
+# 10 synthetic samples of each noise type (40 total)
+python generate_background.py synthetic training/background/ --num-samples 10
+
+# 20 segments from ambient audio
+python generate_background.py extract ambient_sounds.mp3 training/background/ --num-segments 20
+```
+
+After generating background samples, retrain your model:
+```bash
+python train.py training/ models/
+```
 
 ### Convert Audio Files
 Convert directory of audio files to YAMNet format (16kHz mono):

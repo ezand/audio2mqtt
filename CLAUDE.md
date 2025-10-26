@@ -40,6 +40,16 @@ python listen.py --microphone
 python listen.py --threshold 0.8 --energy-threshold -35 --verbose
 ```
 
+### Generate Background Samples
+```bash
+# Generate synthetic noise (white, pink, brown, silence)
+python generate_background.py synthetic training/background/ --num-samples 20
+
+# Extract random segments from audio file
+python generate_background.py extract podcast.mp3 training/background/ --num-segments 30
+```
+Creates background/negative samples to solve single-class training problem.
+
 ### Audio Conversion
 ```bash
 python audio_util.py convert <input_dir> <output_dir>
@@ -83,6 +93,9 @@ Audio Input (loopback/mic) → Ring Buffer (3s history) → Sliding Window (2s)
 
 **Batch Classification:**
 - **main.py**: CLI for batch classification with base YAMNet or custom model
+
+**Utilities:**
+- **generate_background.py**: Generate background/negative samples (synthetic noise or extracted from audio files)
 
 ### Training Data Structure
 ```
