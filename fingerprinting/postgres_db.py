@@ -184,6 +184,20 @@ class PostgreSQLDatabase(Database):
             cur.execute(self.SELECT_NUM_FINGERPRINTS)
             return cur.fetchone()['n']
 
+    def get_song_fingerprint_count(self, song_id):
+        """Return number of fingerprints for a specific song.
+
+        Args:
+            song_id: Song ID to query.
+
+        Returns:
+            Number of fingerprints for the song.
+        """
+        with self.cursor() as cur:
+            query = f'SELECT COUNT(*) as n FROM {self.FINGERPRINTS_TABLENAME} WHERE "{Database.FIELD_SONG_ID}" = %s;'
+            cur.execute(query, (song_id,))
+            return cur.fetchone()['n']
+
     def set_song_fingerprinted(self, sid):
         """Mark song as fingerprinted."""
         with self.cursor() as cur:

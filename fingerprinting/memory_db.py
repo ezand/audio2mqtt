@@ -44,6 +44,17 @@ class MemoryDatabase(Database):
         """Return total number of fingerprints."""
         return len(self.fingerprints)
 
+    def get_song_fingerprint_count(self, song_id):
+        """Return number of fingerprints for a specific song.
+
+        Args:
+            song_id: Song ID to query.
+
+        Returns:
+            Number of fingerprints for the song.
+        """
+        return sum(1 for h, s, o in self.fingerprints if s == song_id)
+
     def set_song_fingerprinted(self, sid):
         """Mark song as fingerprinted."""
         if sid in self.songs:

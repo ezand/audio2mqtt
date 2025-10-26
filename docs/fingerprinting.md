@@ -303,9 +303,11 @@ python listen.py --method fingerprint --device-id 1
 - Fingerprinting is flexible, 2s+ works well for most cases
 
 **Confidence Threshold:**
-- **Default**: `0.3` works well for most cases
-- **Lower (0.2-0.25)**: More sensitive, may get false positives
-- **Higher (0.4-0.5)**: More strict, only very confident matches
+- Confidence is calculated as: `min(matched_hashes / 50, 1.0)`
+- 50+ matching hashes = 1.0 confidence (100%)
+- **Default**: `0.5` (requires 25+ matched hashes)
+- **Lower (0.3-0.4)**: More sensitive (15-20 hashes), may get false positives
+- **Higher (0.7-0.8)**: More strict (35-40 hashes), only very confident matches
 - Fingerprinting naturally has low false positive rate
 
 **Energy Threshold:**

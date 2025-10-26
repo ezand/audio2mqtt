@@ -168,17 +168,27 @@ class FingerprintEngine:
             song_name = results.get('song_name', '')
             class_name = song_name.split('_')[0] if '_' in song_name else song_name
 
-            # Dejavu returns 'confidence' as number of matched hashes (not a 0-1 score)
-            # We use this directly as our confidence metric
+            # Dejavu returns 'confidence' as number of matched hashes
             matched_hashes = results.get('confidence', 0)
+            song_id = results.get('song_id')
+
+            # Calculate confidence as a ratio
+            # For now, use matched_hashes directly as "hash count confidence"
+            # This will be normalized later based on typical match patterns
+            # A good match typically has 50-200+ hashes for a 2s window
+            confidence_ratio = min(matched_hashes / 50.0, 1.0) if matched_hashes > 0 else 0.0
+
+            # Get total fingerprints for the matched song from database for reference
+            db = self.dejavu.db
+            registered_hashes = db.get_song_fingerprint_count(song_id) if song_id else matched_hashes
 
             result = {
                 'class': class_name,
                 'song_name': song_name,
-                'confidence': matched_hashes,  # Use match count as confidence
+                'confidence': confidence_ratio,  # Normalized 0.0-1.0 ratio
                 'offset': results.get('offset_seconds', 0),
-                'input_total_hashes': matched_hashes,  # Dejavu doesn't provide this
-                'fingerprinted_hashes_in_db': matched_hashes,
+                'input_total_hashes': registered_hashes,  # Total hashes in registered song
+                'fingerprinted_hashes_in_db': registered_hashes,
                 'hashes_matched_in_input': matched_hashes
             }
 
