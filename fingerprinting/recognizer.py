@@ -151,7 +151,12 @@ class StreamRecognizer:
 
         elif self.verbose:
             # Log if audio was detected but no match found
-            print(f"  → No match (threshold: {self.confidence_threshold})")
+            if match:
+                print(f"  → No match (best: {match['class']} @ {match['confidence']:.2f}, "
+                      f"hashes: {match['hashes_matched_in_input']}/{match['input_total_hashes']}, "
+                      f"threshold: {self.confidence_threshold})")
+            else:
+                print(f"  → No match (no fingerprint matches found, threshold: {self.confidence_threshold})")
 
         # Filter debounced events
         filtered_detections = self._debounce_events(detections)
@@ -227,7 +232,9 @@ def start_listening(device,
         verbose: Enable verbose logging.
         event_callback: Optional callback function for detected events.
     """
-    sample_rate = 16000
+    # Use Dejavu's default sample rate (44.1kHz)
+    from dejavu import fingerprint
+    sample_rate = fingerprint.DEFAULT_FS
     chunk_size = int(chunk_duration * sample_rate)
 
     # Initialize recognizer

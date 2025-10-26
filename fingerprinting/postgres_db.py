@@ -254,6 +254,11 @@ class PostgreSQLDatabase(Database):
         hash_values = [h for h, _ in hashes]
         hash_dict = {h: offset for h, offset in hashes}
 
+        # Debug: log first few hashes
+        import os
+        if os.environ.get('DEBUG_FINGERPRINT'):
+            print(f"[DEBUG] Querying {len(hash_values)} hashes, first 3: {hash_values[:3]}")
+
         # Query database (manual expansion for IN clause)
         with self.cursor() as cur:
             # Build parameterized query for multiple hashes
@@ -277,6 +282,9 @@ class PostgreSQLDatabase(Database):
                     query_offset = hash_dict[hash_hex]
                     offset_diff = query_offset - db_offset
                     matches.append((song_id, offset_diff))
+
+            if os.environ.get('DEBUG_FINGERPRINT'):
+                print(f"[DEBUG] Found {len(matches)} matches")
 
             return matches
 
