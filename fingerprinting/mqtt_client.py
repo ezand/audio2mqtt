@@ -104,7 +104,15 @@ class MQTTPublisher:
         try:
             self.client.connect(self.broker, self.port, keepalive=60)
             self.client.loop_start()
-            return True
+
+            # Wait for async connection to complete (with timeout)
+            import time
+            timeout = 5.0
+            start = time.time()
+            while not self.connected and (time.time() - start) < timeout:
+                time.sleep(0.1)
+
+            return self.connected
         except Exception as e:
             self.logger.error(f"Failed to connect to MQTT broker: {e}")
             return False

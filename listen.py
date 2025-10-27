@@ -268,6 +268,13 @@ Note: Register audio first using:
 
         # Collect system details
         from dejavu import fingerprint
+
+        # Get database type from engine config or args
+        if args.config and hasattr(engine, 'config'):
+            database_type = engine.config.get('database_type', 'unknown')
+        else:
+            database_type = args.db_type
+
         system_details = {
             "version": get_version(),
             "python_version": platform.python_version(),
@@ -275,7 +282,7 @@ Note: Register audio first using:
             "hostname": socket.gethostname(),
             "device_name": device.name,
             "sample_rate": fingerprint.DEFAULT_FS,
-            "database_type": args.db_type if not args.config else engine.db_type.value if hasattr(engine, 'db_type') else "unknown",
+            "database_type": database_type,
             "fingerprints_count": song_count,
             "config_file": config_file_path,
             "confidence_threshold": confidence_threshold,
