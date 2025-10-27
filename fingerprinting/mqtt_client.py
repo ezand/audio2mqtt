@@ -114,11 +114,12 @@ class MQTTPublisher:
         self.client.loop_stop()
         self.client.disconnect()
 
-    def publish_system_details(self, details: Dict[str, Any]) -> bool:
+    def publish_system_details(self, details: Dict[str, Any], retain: bool = False) -> bool:
         """Publish system details to MQTT.
 
         Args:
             details: System details dictionary.
+            retain: Whether to retain the message (default: False).
 
         Returns:
             True if publish successful, False otherwise.
@@ -135,7 +136,7 @@ class MQTTPublisher:
                 topic=topic,
                 payload=payload_json,
                 qos=self.qos,
-                retain=False
+                retain=retain
             )
 
             if result.rc == mqtt.MQTT_ERR_SUCCESS:

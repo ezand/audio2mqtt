@@ -281,12 +281,12 @@ Note: Register audio first using:
             "confidence_threshold": confidence_threshold,
             "window_duration": window_duration,
             "energy_threshold_db": args.energy_threshold,
-            "debounce_duration": debounce_duration,
+            "default_debounce_duration": debounce_duration,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
         # Publish system details
-        mqtt_publisher.publish_system_details(system_details)
+        mqtt_publisher.publish_system_details(system_details, True)
 
     # Start listening with fingerprinting
     try:
