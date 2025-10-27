@@ -1,0 +1,1333 @@
+{
+  "song_name": "various_super_mario_games_mariodies009",
+  "source_file": "mario_dies_009.wav",
+  "metadata": {
+    "song": "mario_dies_009",
+    "game": "Various Super Mario Games",
+    "category": "game_event",
+    "event_type": "character_perish",
+    "artist": "Nintendo"
+  },
+  "debounce_seconds": 10.0,
+  "file_sha1": "c747eadd10368b4b13816beeefaec0234625e73f",
+  "date_created": "2025-10-27T09:06:55.964002",
+  "total_hashes": 329,
+  "fingerprints": [
+    {
+      "hash": "f3e6c37498d3d5fde2e1",
+      "offset": 11
+    },
+    {
+      "hash": "8ddffe030a0fdcef89f6",
+      "offset": 2
+    },
+    {
+      "hash": "7996f4d5425ab2b890de",
+      "offset": 10
+    },
+    {
+      "hash": "afed50b4467c343fc18d",
+      "offset": 11
+    },
+    {
+      "hash": "f7e323b4ad4719ce98f5",
+      "offset": 13
+    },
+    {
+      "hash": "71dbc33a82568c2b071b",
+      "offset": 10
+    },
+    {
+      "hash": "7b726c86e5705e7747e8",
+      "offset": 7
+    },
+    {
+      "hash": "cd1550704dd93d3dee89",
+      "offset": 8
+    },
+    {
+      "hash": "a3238fbce67f168f21cc",
+      "offset": 15
+    },
+    {
+      "hash": "4c405e906ce5cdf9d131",
+      "offset": 2
+    },
+    {
+      "hash": "0382f48fa436c0e90626",
+      "offset": 13
+    },
+    {
+      "hash": "4c66f6dd9f43428a37d3",
+      "offset": 5
+    },
+    {
+      "hash": "eaf799a94fecdf26ab0f",
+      "offset": 17
+    },
+    {
+      "hash": "9eb433750ffea15f39aa",
+      "offset": 5
+    },
+    {
+      "hash": "b00963251dbeb8189e28",
+      "offset": 11
+    },
+    {
+      "hash": "645cef31c210112534b1",
+      "offset": 15
+    },
+    {
+      "hash": "1fcc860d73bfcef3779b",
+      "offset": 15
+    },
+    {
+      "hash": "8e434eb0aaefb2f131c0",
+      "offset": 15
+    },
+    {
+      "hash": "9eb30fdad4e6d94ff8c3",
+      "offset": 15
+    },
+    {
+      "hash": "b43e4d05e870112d85d7",
+      "offset": 15
+    },
+    {
+      "hash": "050afacfaacf8e38f8ee",
+      "offset": 15
+    },
+    {
+      "hash": "dfa4926bdef5eb2e4060",
+      "offset": 13
+    },
+    {
+      "hash": "7e27c7e9bebd8d78a27a",
+      "offset": 1
+    },
+    {
+      "hash": "5b313ac126d37daf95e4",
+      "offset": 10
+    },
+    {
+      "hash": "8ecdae0bcc3c211db1e2",
+      "offset": 20
+    },
+    {
+      "hash": "310f6836dedcd78f51b0",
+      "offset": 23
+    },
+    {
+      "hash": "c7a4e02242f6008a8283",
+      "offset": 33
+    },
+    {
+      "hash": "6b7d95b6b8ac4af00304",
+      "offset": 13
+    },
+    {
+      "hash": "294f31c6eb1e6aa9221e",
+      "offset": 8
+    },
+    {
+      "hash": "55b585c09e26b0344c1a",
+      "offset": 10
+    },
+    {
+      "hash": "5ab34730c8e6b9b72f2a",
+      "offset": 7
+    },
+    {
+      "hash": "6ee17cccea798a45c34c",
+      "offset": 10
+    },
+    {
+      "hash": "4eb3fb88191ac88beb39",
+      "offset": 11
+    },
+    {
+      "hash": "8b391529bafa8b982d8a",
+      "offset": 13
+    },
+    {
+      "hash": "3df9939b5b766952d185",
+      "offset": 0
+    },
+    {
+      "hash": "30582f6c2372a9db7f15",
+      "offset": 15
+    },
+    {
+      "hash": "be189900811d1f119682",
+      "offset": 10
+    },
+    {
+      "hash": "f0d220582561b6617900",
+      "offset": 15
+    },
+    {
+      "hash": "2965a89a58c87d0dd47c",
+      "offset": 8
+    },
+    {
+      "hash": "ccef6f1d505859ef85df",
+      "offset": 5
+    },
+    {
+      "hash": "753efedd69694430bdcf",
+      "offset": 33
+    },
+    {
+      "hash": "e187dfbf2bfd8c72b8d4",
+      "offset": 5
+    },
+    {
+      "hash": "03771212f6189848132a",
+      "offset": 2
+    },
+    {
+      "hash": "5a47932520d89be67be9",
+      "offset": 15
+    },
+    {
+      "hash": "66b42ade344db7d1e53c",
+      "offset": 10
+    },
+    {
+      "hash": "42efb4d77689b0c34189",
+      "offset": 13
+    },
+    {
+      "hash": "21fa837070a9be8d99a6",
+      "offset": 2
+    },
+    {
+      "hash": "820990418dd13932ef60",
+      "offset": 25
+    },
+    {
+      "hash": "90b6a7e75b2b22a59ef3",
+      "offset": 15
+    },
+    {
+      "hash": "18d3bf5494f7fd34adca",
+      "offset": 5
+    },
+    {
+      "hash": "4a0509a0e3e65c2e6086",
+      "offset": 7
+    },
+    {
+      "hash": "fa350ae57151c6a9353f",
+      "offset": 15
+    },
+    {
+      "hash": "49889fd16ab4f6db9e9e",
+      "offset": 2
+    },
+    {
+      "hash": "68419544ca2e474743a3",
+      "offset": 13
+    },
+    {
+      "hash": "cd5a6b8b07c44fa68f55",
+      "offset": 25
+    },
+    {
+      "hash": "362592bb1375a203ea9a",
+      "offset": 20
+    },
+    {
+      "hash": "b4a6fc70f1dca37608e5",
+      "offset": 13
+    },
+    {
+      "hash": "9d2d911127b01d231ef7",
+      "offset": 1
+    },
+    {
+      "hash": "83068acc11827decfd6c",
+      "offset": 2
+    },
+    {
+      "hash": "ca26c0fd4a3d274ae0a8",
+      "offset": 15
+    },
+    {
+      "hash": "7dbd2c275c17cfa43008",
+      "offset": 5
+    },
+    {
+      "hash": "8cf90614a73c78847c67",
+      "offset": 1
+    },
+    {
+      "hash": "84428547d8b3a5aecf55",
+      "offset": 2
+    },
+    {
+      "hash": "afdd94b2e605abebbcf1",
+      "offset": 10
+    },
+    {
+      "hash": "a402a5a3e612adb63d18",
+      "offset": 2
+    },
+    {
+      "hash": "5c363653fb15b36fb513",
+      "offset": 15
+    },
+    {
+      "hash": "ee6405eaada90a7779fb",
+      "offset": 26
+    },
+    {
+      "hash": "a207b114e7394eaa2490",
+      "offset": 2
+    },
+    {
+      "hash": "eed85082cabbcacc6372",
+      "offset": 0
+    },
+    {
+      "hash": "d8db1ff0b8a48386fcd7",
+      "offset": 8
+    },
+    {
+      "hash": "417ab99e44d8a5563a55",
+      "offset": 2
+    },
+    {
+      "hash": "ea5e5368558af079bd8a",
+      "offset": 5
+    },
+    {
+      "hash": "076f97e0c63f4f5f51c1",
+      "offset": 15
+    },
+    {
+      "hash": "95d5e9205c09c03ade69",
+      "offset": 20
+    },
+    {
+      "hash": "48d8f4085336c53ad92b",
+      "offset": 7
+    },
+    {
+      "hash": "dd2427d5032b2898051a",
+      "offset": 13
+    },
+    {
+      "hash": "74363fc1b478e8a054ad",
+      "offset": 2
+    },
+    {
+      "hash": "85cb6575befccd79361d",
+      "offset": 17
+    },
+    {
+      "hash": "6b58c60bf07e75009397",
+      "offset": 13
+    },
+    {
+      "hash": "15066d5a3bea42684e0d",
+      "offset": 10
+    },
+    {
+      "hash": "b4b1cccd23a7f475afc2",
+      "offset": 13
+    },
+    {
+      "hash": "815fd341787c47b5a8d7",
+      "offset": 1
+    },
+    {
+      "hash": "8d12da7d8fd75f167ba4",
+      "offset": 7
+    },
+    {
+      "hash": "087a998d2a8e10267fb6",
+      "offset": 15
+    },
+    {
+      "hash": "5baf085b28f5b573ba4c",
+      "offset": 2
+    },
+    {
+      "hash": "5216fcff0ece6e7d0737",
+      "offset": 13
+    },
+    {
+      "hash": "e0c3b33f0bbd509c7153",
+      "offset": 17
+    },
+    {
+      "hash": "6dec5489d6dc82141daa",
+      "offset": 2
+    },
+    {
+      "hash": "8b6b90074e01f98b7d57",
+      "offset": 15
+    },
+    {
+      "hash": "e312b0396df48fad3945",
+      "offset": 13
+    },
+    {
+      "hash": "2880f6ba7f5358923cb8",
+      "offset": 10
+    },
+    {
+      "hash": "313e32899f762921b16d",
+      "offset": 17
+    },
+    {
+      "hash": "3f5a60c44d01b1f4c5af",
+      "offset": 10
+    },
+    {
+      "hash": "369ecda7c2e921ed3f41",
+      "offset": 10
+    },
+    {
+      "hash": "1f1fbb778b0ff8cd8537",
+      "offset": 10
+    },
+    {
+      "hash": "de71106a34358a54bf7f",
+      "offset": 10
+    },
+    {
+      "hash": "7679ec188bd13ff85ec1",
+      "offset": 20
+    },
+    {
+      "hash": "456953d9d66e3a048b2d",
+      "offset": 11
+    },
+    {
+      "hash": "20acd56098a06375ffc7",
+      "offset": 10
+    },
+    {
+      "hash": "7ca1758234ccf1d777b9",
+      "offset": 15
+    },
+    {
+      "hash": "467d1537aa82ede36001",
+      "offset": 11
+    },
+    {
+      "hash": "7e6e2e1e0463e56fbc14",
+      "offset": 10
+    },
+    {
+      "hash": "7e0e0b4c04674155ed85",
+      "offset": 15
+    },
+    {
+      "hash": "ae2f4fb9d24351a010a7",
+      "offset": 15
+    },
+    {
+      "hash": "e5366d5b6e7c413a1c49",
+      "offset": 26
+    },
+    {
+      "hash": "3ccc2140a3269c1de438",
+      "offset": 15
+    },
+    {
+      "hash": "a6f3f577b7a069ce5c70",
+      "offset": 15
+    },
+    {
+      "hash": "35434ac6b73fc9b37b6a",
+      "offset": 1
+    },
+    {
+      "hash": "3822ad7c8ef274650939",
+      "offset": 7
+    },
+    {
+      "hash": "95ee07ca4113f45465d0",
+      "offset": 2
+    },
+    {
+      "hash": "41547f2fff643fa4aad8",
+      "offset": 0
+    },
+    {
+      "hash": "15ca98d9fb6421e6b141",
+      "offset": 2
+    },
+    {
+      "hash": "9a6ab5d863e626241da9",
+      "offset": 5
+    },
+    {
+      "hash": "96a57833bd10e70496c5",
+      "offset": 10
+    },
+    {
+      "hash": "d806b52164c866d4147d",
+      "offset": 13
+    },
+    {
+      "hash": "d3ec72d19efac5b3af27",
+      "offset": 1
+    },
+    {
+      "hash": "b390ac04eea0379a782d",
+      "offset": 15
+    },
+    {
+      "hash": "be577f020defc6315355",
+      "offset": 11
+    },
+    {
+      "hash": "19a99c684f1377e76cb5",
+      "offset": 5
+    },
+    {
+      "hash": "ee6fc0f95bd987cfb250",
+      "offset": 13
+    },
+    {
+      "hash": "b4a923496d8f8a39edc9",
+      "offset": 5
+    },
+    {
+      "hash": "b0c220019b0bbdd7a93d",
+      "offset": 13
+    },
+    {
+      "hash": "6f4f7fbe8fdd839809da",
+      "offset": 13
+    },
+    {
+      "hash": "df849c7b909f8fd359ff",
+      "offset": 0
+    },
+    {
+      "hash": "6fa1700e40ced88b2855",
+      "offset": 11
+    },
+    {
+      "hash": "5d9e3c354d29f96cc537",
+      "offset": 10
+    },
+    {
+      "hash": "3f54e54820a4aa0e128c",
+      "offset": 23
+    },
+    {
+      "hash": "cc533df7c451c1799fc3",
+      "offset": 2
+    },
+    {
+      "hash": "f94db5301fde541cfbe9",
+      "offset": 20
+    },
+    {
+      "hash": "9abeed872c69f7241698",
+      "offset": 5
+    },
+    {
+      "hash": "6846e1069394889d8ffa",
+      "offset": 10
+    },
+    {
+      "hash": "6dd739ad41ab416436af",
+      "offset": 5
+    },
+    {
+      "hash": "c4a363274a71d39b24be",
+      "offset": 15
+    },
+    {
+      "hash": "aefdc8328dc86a317f80",
+      "offset": 15
+    },
+    {
+      "hash": "c316896ca1432eb354ae",
+      "offset": 15
+    },
+    {
+      "hash": "7308c54fb31c3a063874",
+      "offset": 0
+    },
+    {
+      "hash": "b78c6bc4d7bdcdc8853a",
+      "offset": 10
+    },
+    {
+      "hash": "a0667e10d1be445a97c4",
+      "offset": 10
+    },
+    {
+      "hash": "96b9ca93bd6933e683de",
+      "offset": 15
+    },
+    {
+      "hash": "56d831a9de273c9698af",
+      "offset": 13
+    },
+    {
+      "hash": "59527bacd30a14331619",
+      "offset": 8
+    },
+    {
+      "hash": "34648514285ab0d9ebf3",
+      "offset": 0
+    },
+    {
+      "hash": "d2c5b2a556e82465d3fd",
+      "offset": 15
+    },
+    {
+      "hash": "c3034bde8530e8cfee38",
+      "offset": 25
+    },
+    {
+      "hash": "a14aaa65764d684280a8",
+      "offset": 1
+    },
+    {
+      "hash": "0a7210a90cf748495099",
+      "offset": 1
+    },
+    {
+      "hash": "d7035280263dc9afa362",
+      "offset": 13
+    },
+    {
+      "hash": "78a25258cfb440b788b6",
+      "offset": 15
+    },
+    {
+      "hash": "dbd07637a3fd314f13da",
+      "offset": 5
+    },
+    {
+      "hash": "fa422d6e55dab19676e1",
+      "offset": 10
+    },
+    {
+      "hash": "90aba542b1d315fb6963",
+      "offset": 0
+    },
+    {
+      "hash": "7ab367ba0a6e09252686",
+      "offset": 2
+    },
+    {
+      "hash": "5806a6496aa68de741de",
+      "offset": 5
+    },
+    {
+      "hash": "84520eb6a62aa227c9f4",
+      "offset": 26
+    },
+    {
+      "hash": "851e3f6ab0b7de2567a4",
+      "offset": 10
+    },
+    {
+      "hash": "54ffdf78a1c2c9723c1f",
+      "offset": 15
+    },
+    {
+      "hash": "f72d24344f690608bd60",
+      "offset": 5
+    },
+    {
+      "hash": "b11c78b695de733c3025",
+      "offset": 5
+    },
+    {
+      "hash": "8ca45aa439d74b418ef6",
+      "offset": 0
+    },
+    {
+      "hash": "3cdaf46266d117bf6a3f",
+      "offset": 23
+    },
+    {
+      "hash": "c3fd770b80549dea299e",
+      "offset": 13
+    },
+    {
+      "hash": "5a83ad191cc6010364f3",
+      "offset": 7
+    },
+    {
+      "hash": "e2ca7d23ea5feb6a26aa",
+      "offset": 7
+    },
+    {
+      "hash": "7779737f6e488ea805fc",
+      "offset": 13
+    },
+    {
+      "hash": "07b7cad41b988518f3d2",
+      "offset": 5
+    },
+    {
+      "hash": "08ad01c97c31683f63af",
+      "offset": 15
+    },
+    {
+      "hash": "80218f6765584fb03711",
+      "offset": 11
+    },
+    {
+      "hash": "47b29a2ade043fe3d2dc",
+      "offset": 5
+    },
+    {
+      "hash": "2e3dfe8872f41ed9b40a",
+      "offset": 8
+    },
+    {
+      "hash": "6b81fc0b0ede155b265a",
+      "offset": 33
+    },
+    {
+      "hash": "b5476492f92d8d03ae2a",
+      "offset": 13
+    },
+    {
+      "hash": "2b56f8bc3335544453c3",
+      "offset": 7
+    },
+    {
+      "hash": "b0e22f30cf6c523ced58",
+      "offset": 13
+    },
+    {
+      "hash": "0ea9499a07e359a3fe99",
+      "offset": 15
+    },
+    {
+      "hash": "05d9e5fc0826b0d706b8",
+      "offset": 1
+    },
+    {
+      "hash": "6d023a27ef0fea79dcc2",
+      "offset": 11
+    },
+    {
+      "hash": "ca2e046a09ccd24ba036",
+      "offset": 10
+    },
+    {
+      "hash": "a2e8874a1782ad304368",
+      "offset": 5
+    },
+    {
+      "hash": "c7605482cca2fc1e5e90",
+      "offset": 15
+    },
+    {
+      "hash": "a532d5dc81863586bdd5",
+      "offset": 8
+    },
+    {
+      "hash": "c54e644fbe9f5d8f5a4b",
+      "offset": 7
+    },
+    {
+      "hash": "86ef9d5c4d1fdf46e01a",
+      "offset": 5
+    },
+    {
+      "hash": "09bd450bc43dc3c8bf9e",
+      "offset": 15
+    },
+    {
+      "hash": "a6c9953f053f68e06a25",
+      "offset": 1
+    },
+    {
+      "hash": "c2b26318d9e0cdd356f4",
+      "offset": 10
+    },
+    {
+      "hash": "26b7896041c9a38dcf56",
+      "offset": 33
+    },
+    {
+      "hash": "1b7cbd975f2bf327875e",
+      "offset": 15
+    },
+    {
+      "hash": "c08715f3fc4838b597e9",
+      "offset": 10
+    },
+    {
+      "hash": "43dc3817f395a8ef58b6",
+      "offset": 15
+    },
+    {
+      "hash": "79dcbdda61cbf51c3485",
+      "offset": 5
+    },
+    {
+      "hash": "8968b40d2cc29a38e343",
+      "offset": 10
+    },
+    {
+      "hash": "340a5728e4de0a30748a",
+      "offset": 0
+    },
+    {
+      "hash": "f7242622e4e1e286d395",
+      "offset": 23
+    },
+    {
+      "hash": "291ecf421c98e90f77e3",
+      "offset": 10
+    },
+    {
+      "hash": "634cb0249d5538cdd020",
+      "offset": 15
+    },
+    {
+      "hash": "08f00cfaac036e5515da",
+      "offset": 15
+    },
+    {
+      "hash": "e18e794c8f9fe0e1b54c",
+      "offset": 8
+    },
+    {
+      "hash": "4d0c5dec75989980751b",
+      "offset": 5
+    },
+    {
+      "hash": "ab3975bda6d745a36ef3",
+      "offset": 2
+    },
+    {
+      "hash": "574562dd5f331cb5ee7d",
+      "offset": 17
+    },
+    {
+      "hash": "e9731bbd448ec85a5537",
+      "offset": 15
+    },
+    {
+      "hash": "fcd969478c4fbdeb0518",
+      "offset": 15
+    },
+    {
+      "hash": "979ad5613591e43adb83",
+      "offset": 33
+    },
+    {
+      "hash": "89bd58c39c36706fa19d",
+      "offset": 7
+    },
+    {
+      "hash": "2b96d1ac42aae6c3d70b",
+      "offset": 2
+    },
+    {
+      "hash": "c6f8d194c8697e2ca1c5",
+      "offset": 8
+    },
+    {
+      "hash": "386511184585c5d98c46",
+      "offset": 15
+    },
+    {
+      "hash": "3586f68d410c7383d473",
+      "offset": 5
+    },
+    {
+      "hash": "f74290c54c4229224a78",
+      "offset": 17
+    },
+    {
+      "hash": "b5d1ca3392a28200be8c",
+      "offset": 33
+    },
+    {
+      "hash": "760d615b9d01558110fe",
+      "offset": 13
+    },
+    {
+      "hash": "a2959216c99f6b520275",
+      "offset": 33
+    },
+    {
+      "hash": "e55bf89459090a199948",
+      "offset": 5
+    },
+    {
+      "hash": "b77ea98ae335a65d35cc",
+      "offset": 23
+    },
+    {
+      "hash": "5da781a3e46ea8b37b81",
+      "offset": 10
+    },
+    {
+      "hash": "9881bb96fa1db03ef21b",
+      "offset": 10
+    },
+    {
+      "hash": "d45aeb85d26ea1dbaf82",
+      "offset": 10
+    },
+    {
+      "hash": "0ba35c85aff65a2955b4",
+      "offset": 5
+    },
+    {
+      "hash": "843cf9ba87460a971bdf",
+      "offset": 26
+    },
+    {
+      "hash": "de7b78fa7e79de7219f7",
+      "offset": 15
+    },
+    {
+      "hash": "2d6b1c9824e37796f2fd",
+      "offset": 13
+    },
+    {
+      "hash": "ec68fd0d201479b28b76",
+      "offset": 15
+    },
+    {
+      "hash": "675cb0162e09ca925f79",
+      "offset": 1
+    },
+    {
+      "hash": "8fd3e039f12d00b83c56",
+      "offset": 13
+    },
+    {
+      "hash": "4413ccb1dc67ad629fdc",
+      "offset": 13
+    },
+    {
+      "hash": "1dd2233f2e91cc0e075b",
+      "offset": 13
+    },
+    {
+      "hash": "686e9dbdbfa74e25a1f1",
+      "offset": 33
+    },
+    {
+      "hash": "1341d694b6ff09b37c4c",
+      "offset": 1
+    },
+    {
+      "hash": "379243560ecd80bceee0",
+      "offset": 13
+    },
+    {
+      "hash": "3e2e76cc3a8a3cbc3640",
+      "offset": 13
+    },
+    {
+      "hash": "805fb22047efdbf73487",
+      "offset": 15
+    },
+    {
+      "hash": "e6b0c4326a0f7beb62ca",
+      "offset": 11
+    },
+    {
+      "hash": "28deb38b706f9f733dde",
+      "offset": 5
+    },
+    {
+      "hash": "22d83ce506d0856462e6",
+      "offset": 8
+    },
+    {
+      "hash": "68e5c7437ba6429d718a",
+      "offset": 23
+    },
+    {
+      "hash": "64d05783338e76bc2a64",
+      "offset": 2
+    },
+    {
+      "hash": "5ee487fe8eaa41f06034",
+      "offset": 25
+    },
+    {
+      "hash": "8a162ed7ca5b524cce37",
+      "offset": 2
+    },
+    {
+      "hash": "201846c99e497815de57",
+      "offset": 38
+    },
+    {
+      "hash": "5c8f4fe01b7849fa2c68",
+      "offset": 7
+    },
+    {
+      "hash": "d91cfb69f04a775a9357",
+      "offset": 25
+    },
+    {
+      "hash": "d039437c81e01c9399ee",
+      "offset": 1
+    },
+    {
+      "hash": "4e1d73c797671fac95c2",
+      "offset": 15
+    },
+    {
+      "hash": "fcb4d5e4c87054523dea",
+      "offset": 10
+    },
+    {
+      "hash": "51147233fa07f7e2565d",
+      "offset": 0
+    },
+    {
+      "hash": "d11323780a2a7bf34c51",
+      "offset": 5
+    },
+    {
+      "hash": "67454383242fa4659932",
+      "offset": 5
+    },
+    {
+      "hash": "4e29c37b522fe58f5daa",
+      "offset": 17
+    },
+    {
+      "hash": "00e76e6d7b2d1baaf3f2",
+      "offset": 13
+    },
+    {
+      "hash": "75180f7df4dca2f510db",
+      "offset": 15
+    },
+    {
+      "hash": "fd3255c6980278f36de5",
+      "offset": 10
+    },
+    {
+      "hash": "806f7eeb1043b829f676",
+      "offset": 15
+    },
+    {
+      "hash": "4b3272022ca6d35ec6ef",
+      "offset": 5
+    },
+    {
+      "hash": "bf066daf795e7e25a302",
+      "offset": 8
+    },
+    {
+      "hash": "6fc36665ef9e0917a06c",
+      "offset": 2
+    },
+    {
+      "hash": "4e9265c164736d5e9104",
+      "offset": 8
+    },
+    {
+      "hash": "36e5c57657a577dffdf3",
+      "offset": 15
+    },
+    {
+      "hash": "0cee55fcfbe8dd693cbf",
+      "offset": 10
+    },
+    {
+      "hash": "f81d5825d7a780411941",
+      "offset": 0
+    },
+    {
+      "hash": "21a2f990807fb736f29d",
+      "offset": 15
+    },
+    {
+      "hash": "c1be392decbcd28d9986",
+      "offset": 1
+    },
+    {
+      "hash": "9ee4e0939991e4e9850e",
+      "offset": 2
+    },
+    {
+      "hash": "dd7a42c09911045383ea",
+      "offset": 5
+    },
+    {
+      "hash": "2be24aac5598a6a084b6",
+      "offset": 10
+    },
+    {
+      "hash": "74c5d8f625b67bf6c032",
+      "offset": 2
+    },
+    {
+      "hash": "2bcbdd35f13a0a13ce88",
+      "offset": 13
+    },
+    {
+      "hash": "6afeb41cfa31aae1805a",
+      "offset": 10
+    },
+    {
+      "hash": "c9a9a3bf5f9addef3476",
+      "offset": 13
+    },
+    {
+      "hash": "6f49f6dd6d3e8dde0fc0",
+      "offset": 15
+    },
+    {
+      "hash": "411943703007ab91c3a5",
+      "offset": 13
+    },
+    {
+      "hash": "bb84c0d003a860a153b0",
+      "offset": 11
+    },
+    {
+      "hash": "620d2c5009c05b7a811e",
+      "offset": 15
+    },
+    {
+      "hash": "0ba982eec40f047b22d4",
+      "offset": 2
+    },
+    {
+      "hash": "8ac91a697a5577b15c31",
+      "offset": 5
+    },
+    {
+      "hash": "ddadf5eeccf097f214cb",
+      "offset": 11
+    },
+    {
+      "hash": "4306bb2265b162505853",
+      "offset": 13
+    },
+    {
+      "hash": "3741240eb79abfede54d",
+      "offset": 15
+    },
+    {
+      "hash": "f2fdfc7fe384609b6dfe",
+      "offset": 20
+    },
+    {
+      "hash": "7c3b21bafe439a86e881",
+      "offset": 5
+    },
+    {
+      "hash": "8afec4f1ad64e0533dc0",
+      "offset": 5
+    },
+    {
+      "hash": "9547862a4690e5ec1107",
+      "offset": 13
+    },
+    {
+      "hash": "5e0f369dea07842f5cc3",
+      "offset": 8
+    },
+    {
+      "hash": "2e049441fc94b26a3eee",
+      "offset": 5
+    },
+    {
+      "hash": "71c64c29e99163d8f88d",
+      "offset": 7
+    },
+    {
+      "hash": "43f2c3a200c4580ba355",
+      "offset": 10
+    },
+    {
+      "hash": "a0bd66cc82274290d4a7",
+      "offset": 2
+    },
+    {
+      "hash": "16bcedfd3c762cf91989",
+      "offset": 13
+    },
+    {
+      "hash": "722eb33c8077599acb2c",
+      "offset": 5
+    },
+    {
+      "hash": "cc389aaf45a496348b43",
+      "offset": 13
+    },
+    {
+      "hash": "7af28fc5c0dcc952503e",
+      "offset": 15
+    },
+    {
+      "hash": "ae85b8daca07e4d0027c",
+      "offset": 8
+    },
+    {
+      "hash": "3d8f899174cd7fce2938",
+      "offset": 17
+    },
+    {
+      "hash": "4a1385533d4d4390686e",
+      "offset": 17
+    },
+    {
+      "hash": "dde0afe95abd90888547",
+      "offset": 25
+    },
+    {
+      "hash": "d97a3e23567a673ef372",
+      "offset": 15
+    },
+    {
+      "hash": "0c516a38258a5909c0d9",
+      "offset": 13
+    },
+    {
+      "hash": "e79b640a3ad1b23fbb90",
+      "offset": 13
+    },
+    {
+      "hash": "bacc392be840252a5505",
+      "offset": 20
+    },
+    {
+      "hash": "4c1c5c94c1c6cf33e959",
+      "offset": 5
+    },
+    {
+      "hash": "e1ba23aa8592adb4cb33",
+      "offset": 7
+    },
+    {
+      "hash": "aa5b7c29798b91894236",
+      "offset": 33
+    },
+    {
+      "hash": "5bd22131f93b1f011aab",
+      "offset": 10
+    },
+    {
+      "hash": "75f95b7b2814fd55ada5",
+      "offset": 23
+    },
+    {
+      "hash": "6caa0527f5f99554d85e",
+      "offset": 26
+    },
+    {
+      "hash": "dd6bb4055356eb3c34c8",
+      "offset": 10
+    },
+    {
+      "hash": "732f090fa706d1c51a06",
+      "offset": 0
+    },
+    {
+      "hash": "e264f9391b6aad46652c",
+      "offset": 2
+    },
+    {
+      "hash": "d2e1465475ef8d3dbc2f",
+      "offset": 10
+    },
+    {
+      "hash": "a5129ab9c35150d442c4",
+      "offset": 10
+    },
+    {
+      "hash": "a2d8ee10dafc20d5b651",
+      "offset": 15
+    },
+    {
+      "hash": "16ede812e52851a950ff",
+      "offset": 5
+    },
+    {
+      "hash": "88919acbe931feaa2027",
+      "offset": 0
+    },
+    {
+      "hash": "0ed35af9c7ab8657a584",
+      "offset": 15
+    },
+    {
+      "hash": "fb6dbef9adeafd465061",
+      "offset": 15
+    },
+    {
+      "hash": "dc2e80f270beacb66d56",
+      "offset": 5
+    },
+    {
+      "hash": "487bf3e855ef309fa720",
+      "offset": 13
+    },
+    {
+      "hash": "6e2070afd63422827916",
+      "offset": 5
+    },
+    {
+      "hash": "492b1165d5ef49117247",
+      "offset": 10
+    },
+    {
+      "hash": "0d5a5c7a82d66a19dabf",
+      "offset": 13
+    },
+    {
+      "hash": "f73bc5669c063132a86e",
+      "offset": 5
+    },
+    {
+      "hash": "e1e4e55b0a4b308564de",
+      "offset": 15
+    },
+    {
+      "hash": "fb3a5684c2e020e41b35",
+      "offset": 15
+    },
+    {
+      "hash": "6ea4ac6e9cf2593b8336",
+      "offset": 20
+    },
+    {
+      "hash": "b999bca378d6887769c3",
+      "offset": 0
+    },
+    {
+      "hash": "fe1e71fd968d99a8a983",
+      "offset": 5
+    },
+    {
+      "hash": "ba72b1422956a46dfe46",
+      "offset": 2
+    },
+    {
+      "hash": "2e49a4d65674a7283e24",
+      "offset": 15
+    },
+    {
+      "hash": "ffcb820c90f0c18db9ea",
+      "offset": 11
+    },
+    {
+      "hash": "75c2b54cf8b7d851f252",
+      "offset": 5
+    }
+  ]
+}
