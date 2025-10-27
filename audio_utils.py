@@ -1,17 +1,26 @@
 """Audio utility functions for fingerprinting preparation.
 
-This module provides utilities to batch convert audio files to the optimal format
-for Dejavu fingerprinting (44.1kHz mono WAV).
+This module provides utilities for:
+- Recording audio from devices (loopback or microphone)
+- Batch converting audio files to optimal format (44.1kHz mono WAV)
+- Creating YAML metadata scaffolds for fingerprinting workflow
 """
 
 import argparse
 import json
 import subprocess
 import sys
+import signal
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
+import numpy as np
+import soundcard as sc
 import yaml
+
+from audio_device import select_device, list_audio_devices, print_devices
 
 
 # Optimal format for Dejavu fingerprinting
@@ -457,27 +466,166 @@ def batch_create_yaml_scaffolds(
     return stats
 
 
+# Global flag for handling interrupt signal
+_recording_active = False
+
+
+def signal_handler(signum, frame):
+    """Handle Ctrl+C interrupt signal."""
+    global _recording_active
+    if _recording_active:
+        print("\n\nRecording interrupted by user. Saving file...")
+        _recording_active = False
+
+
+def record_audio(
+    output_path: Path,
+    device_id: Optional[int] = None,
+    device_name: Optional[str] = None,
+    use_microphone: bool = False,
+    duration: Optional[float] = None,
+    sample_rate: int = OPTIMAL_SAMPLE_RATE
+) -> Tuple[bool, str]:
+    """Record audio from specified device to WAV file.
+
+    Args:
+        output_path: Path to output WAV file.
+        device_id: Device ID to record from.
+        device_name: Device name to search for (substring match).
+        use_microphone: If True, auto-select microphone instead of loopback.
+        duration: Recording duration in seconds (None = record until interrupted).
+        sample_rate: Sample rate in Hz (default: 44100).
+
+    Returns:
+        Tuple of (success, message).
+    """
+    global _recording_active
+
+    # Register signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Select device
+    device = select_device(
+        device_id=device_id,
+        device_name=device_name,
+        auto_select_loopback=not use_microphone,
+        prefer_microphone=use_microphone
+    )
+
+    if device is None:
+        return (False, "No suitable device found")
+
+    # Check if output file already exists
+    if output_path.exists():
+        return (False, f"Output file already exists: {output_path}")
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"\nRecording to: {output_path}")
+    print(f"Sample rate: {sample_rate} Hz")
+    if duration:
+        print(f"Duration: {duration:.1f}s")
+    else:
+        print("Duration: Until interrupted (Ctrl+C)")
+    print(f"\nPress Ctrl+C to stop recording...\n")
+
+    # Get device's native channel count
+    device_channels = device.channels
+    print(f"Device channels: {device_channels}")
+
+    # Start recording
+    _recording_active = True
+    start_time = time.time()
+    chunks = []
+
+    try:
+        # Record at device's native channel count
+        with device.recorder(samplerate=sample_rate, channels=device_channels) as recorder:
+            while _recording_active:
+                # Record in 0.5s chunks
+                chunk = recorder.record(numframes=int(sample_rate * 0.5))
+                chunks.append(chunk)
+
+                elapsed = time.time() - start_time
+
+                # Print progress
+                print(f"\rRecording... {elapsed:.1f}s", end='', flush=True)
+
+                # Check duration limit
+                if duration and elapsed >= duration:
+                    break
+
+    except Exception as e:
+        return (False, f"Recording error: {e}")
+
+    # Concatenate all chunks
+    if not chunks:
+        return (False, "No audio data recorded")
+
+    audio_data = np.concatenate(chunks, axis=0)
+
+    # Convert to mono if stereo/multi-channel
+    if audio_data.ndim > 1 and audio_data.shape[1] > 1:
+        # Average all channels to mono
+        audio_data = np.mean(audio_data, axis=1)
+    elif audio_data.ndim > 1:
+        # Single channel, flatten
+        audio_data = audio_data[:, 0]
+
+    duration_actual = len(audio_data) / sample_rate
+
+    # Save to WAV file
+    try:
+        # Ensure audio is mono at this point
+        if audio_data.ndim > 1:
+            audio_data = audio_data.flatten()
+
+        # Write WAV file
+        import wave
+        with wave.open(str(output_path), 'w') as wav_file:
+            wav_file.setnchannels(1)  # Mono
+            wav_file.setsampwidth(2)  # 16-bit
+            wav_file.setframerate(sample_rate)
+
+            # Convert float32 to int16
+            audio_int16 = (audio_data * 32767).astype(np.int16)
+            wav_file.writeframes(audio_int16.tobytes())
+
+        print(f"\n\n✓ Recording saved: {output_path.name}")
+        print(f"  Duration: {duration_actual:.2f}s")
+        print(f"  Size: {output_path.stat().st_size / 1024:.1f} KB")
+
+        return (True, f"Recorded {duration_actual:.2f}s to {output_path}")
+
+    except Exception as e:
+        return (False, f"Error saving file: {e}")
+    finally:
+        _recording_active = False
+
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description='Convert audio files to optimal format for Dejavu fingerprinting (44.1kHz mono WAV)',
+        description='Audio utilities for Dejavu fingerprinting (conversion, recording, metadata)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Record audio from device
+  python audio_utils.py record output.wav
+  python audio_utils.py record output.wav --microphone --duration 10
+
   # Preview conversions (dry run)
   python audio_utils.py convert source_sounds/ --dry-run
 
   # Convert all files recursively
   python audio_utils.py convert source_sounds/ --recursive
 
-  # Convert to separate output directory
-  python audio_utils.py convert source_sounds/ --output converted/
-
-  # Convert single file
-  python audio_utils.py convert audio.mp3 --output audio.wav
-
   # Check file info
   python audio_utils.py info audio.mp3
+
+  # Create YAML metadata scaffolds
+  python audio_utils.py create-yaml source_sounds/ --recursive
         """
     )
 
@@ -507,6 +655,17 @@ Examples:
                            help='Add metadata field (can be used multiple times, e.g., --meta game="Super Mario" --meta year=1990)')
     yaml_parser.add_argument('--debounce', type=float, metavar='SECONDS',
                            help='Set MQTT debounce duration in seconds (e.g., --debounce 10.0)')
+
+    # Record command
+    record_parser = subparsers.add_parser('record', help='Record audio from device')
+    record_parser.add_argument('output', type=Path, help='Output WAV file path')
+    record_parser.add_argument('--device-id', type=int, metavar='ID', help='Device ID to record from')
+    record_parser.add_argument('--device', type=str, metavar='NAME', help='Device name to search for (substring match)')
+    record_parser.add_argument('--microphone', action='store_true', help='Use microphone instead of loopback device')
+    record_parser.add_argument('--duration', type=float, metavar='SECONDS', help='Recording duration in seconds (default: until Ctrl+C)')
+    record_parser.add_argument('--sample-rate', type=int, metavar='HZ', default=OPTIMAL_SAMPLE_RATE,
+                             help=f'Sample rate in Hz (default: {OPTIMAL_SAMPLE_RATE})')
+    record_parser.add_argument('--list-devices', action='store_true', help='List available devices and exit')
 
     args = parser.parse_args()
 
@@ -604,6 +763,29 @@ Examples:
         else:
             print(f"Error: Path not found: {args.path}")
             return 1
+
+    if args.command == 'record':
+        # List devices if requested
+        if args.list_devices:
+            devices = list_audio_devices(include_loopback=True)
+            print_devices(devices)
+            return 0
+
+        # Record audio
+        success, message = record_audio(
+            output_path=args.output,
+            device_id=args.device_id,
+            device_name=args.device,
+            use_microphone=args.microphone,
+            duration=args.duration,
+            sample_rate=args.sample_rate
+        )
+
+        if not success:
+            print(f"Error: {message}")
+            return 1
+
+        return 0
 
 
 if __name__ == '__main__':

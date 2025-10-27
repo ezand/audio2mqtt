@@ -36,6 +36,9 @@ Audio fingerprinting creates unique "signatures" for exact matching:
 ## Quick Start
 
 ```bash
+# 0. (Optional) Record audio from system or microphone
+python audio_utils.py record source_sounds/mario_dies_001.wav
+
 # 1. Create YAML metadata files for each audio file
 # source_sounds/song.yaml:
 #   source: song.mp3
@@ -59,7 +62,7 @@ python listen.py --config dev-config.yaml
 
 Detailed documentation:
 
-- **[Audio Utilities](docs/audio_utils.md)** - Batch convert audio to optimal format (44.1kHz mono WAV)
+- **[Audio Utilities](docs/audio_utils.md)** - Record audio, batch convert to optimal format (44.1kHz mono WAV), create YAML scaffolds
 - **[Fingerprinting Guide](docs/fingerprinting.md)** - Complete guide (YAML metadata, fingerprint generation, database import, recognition)
 - **[MQTT Integration](docs/mqtt.md)** - Publish detection events to MQTT broker
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input

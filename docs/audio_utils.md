@@ -19,6 +19,70 @@ Dejavu fingerprinting works best with:
 
 ## Commands
 
+### Record Audio from Device
+
+Record audio from any input device (loopback or microphone) to WAV file at optimal format:
+
+```bash
+# List available devices
+python audio_utils.py record output.wav --list-devices
+
+# Record from auto-selected loopback device (system audio)
+python audio_utils.py record system_audio.wav
+
+# Record from microphone
+python audio_utils.py record mic_audio.wav --microphone
+
+# Record for specific duration (10 seconds)
+python audio_utils.py record test.wav --duration 10
+
+# Record from specific device by name
+python audio_utils.py record audio.wav --device "BlackHole"
+
+# Record from specific device by ID
+python audio_utils.py record audio.wav --device-id 1
+
+# Record at different sample rate
+python audio_utils.py record audio.wav --sample-rate 48000
+
+# Record until Ctrl+C (saves automatically)
+python audio_utils.py record long_recording.wav
+```
+
+**Output:**
+```
+Selected device: BlackHole 2ch
+
+Recording to: system_audio.wav
+Sample rate: 44100 Hz
+Duration: Until interrupted (Ctrl+C)
+
+Press Ctrl+C to stop recording...
+
+Recording... 5.3s
+^C
+Recording interrupted by user. Saving file...
+
+✓ Recording saved: system_audio.wav
+  Duration: 5.31s
+  Size: 465.2 KB
+```
+
+**Features:**
+- Auto-selects loopback device by default (use `--microphone` for mic)
+- Records at optimal format (44.1kHz mono 16-bit WAV)
+- Graceful interrupt handling (Ctrl+C saves recording)
+- Real-time progress display
+- Prevents overwriting existing files
+
+**Common options:**
+- `--device NAME` - Device name substring match (e.g., "BlackHole")
+- `--device-id ID` - Specific device ID from `--list-devices`
+- `--microphone` - Use microphone instead of loopback
+- `--duration SECONDS` - Record for fixed duration
+- `--sample-rate HZ` - Sample rate (default: 44100)
+- `--list-devices` - Show available devices
+
 ### Create YAML Metadata Scaffolds
 
 Generate YAML metadata files for audio files with minimal default values:
@@ -200,6 +264,51 @@ Conversion Summary:
 
 ## Command Reference
 
+### `record` - Record Audio from Device
+
+```bash
+python audio_utils.py record <output.wav> [options]
+```
+
+**Arguments:**
+- `output` - Output WAV file path
+
+**Options:**
+- `--device-id ID` - Device ID to record from (see `--list-devices`)
+- `--device NAME` - Device name to search for (substring match, case-insensitive)
+- `--microphone` - Use microphone instead of loopback device
+- `--duration SECONDS` - Recording duration in seconds (default: record until Ctrl+C)
+- `--sample-rate HZ` - Sample rate in Hz (default: 44100)
+- `--list-devices` - List available audio devices and exit
+
+**Examples:**
+```bash
+# List available devices
+python audio_utils.py record output.wav --list-devices
+
+# Record system audio (loopback)
+python audio_utils.py record system_audio.wav
+
+# Record from microphone
+python audio_utils.py record mic_recording.wav --microphone
+
+# Record for 10 seconds
+python audio_utils.py record test.wav --duration 10
+
+# Record from specific device
+python audio_utils.py record audio.wav --device "BlackHole"
+
+# Record with custom sample rate
+python audio_utils.py record audio.wav --sample-rate 48000
+```
+
+**Notes:**
+- Press Ctrl+C to stop recording (file is saved automatically)
+- Auto-selects loopback device by default for system audio capture
+- Use `--microphone` to auto-select microphone input
+- Recording is saved in optimal format (44.1kHz mono 16-bit WAV)
+- Will not overwrite existing files
+
 ### `create-yaml` - Create YAML Metadata Scaffolds
 
 ```bash
@@ -282,7 +391,14 @@ Output format:
 
 ⚠️ **IMPORTANT**: `generate_fingerprint_files.py` does **NOT** automatically convert audio to the optimal format. You **MUST** convert audio files BEFORE fingerprint generation, otherwise you will get insufficient fingerprints and poor recognition accuracy.
 
-1. **Organize source audio** in `source_sounds/` directory
+1. **Record or organize source audio** in `source_sounds/` directory:
+   ```bash
+   # Record system audio (game sounds, music, etc.)
+   python audio_utils.py record source_sounds/mario_dies_001.wav
+
+   # Or organize existing audio files
+   cp ~/Downloads/*.mp3 source_sounds/
+   ```
 
 2. **Convert to optimal format** (44.1kHz mono WAV) - **REQUIRED STEP**:
    ```bash
