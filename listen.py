@@ -1,7 +1,12 @@
 """Real-time audio fingerprinting listener CLI."""
 
 import argparse
+import platform
+import signal
+import socket
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from audio_device import list_audio_devices, print_devices, select_device
@@ -9,6 +14,27 @@ from fingerprinting.engine import FingerprintEngine
 from fingerprinting.storage_config import DatabaseType, load_recognition_config, load_full_config
 from fingerprinting.recognizer import start_listening
 from fingerprinting.mqtt_client import MQTTPublisher
+
+
+def get_version() -> str:
+    """Get current version from git.
+
+    Returns:
+        Git commit hash or 'unknown' if not in git repo.
+    """
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    return "unknown"
 
 
 def main():
@@ -168,9 +194,11 @@ Note: Register audio first using:
 
     # Initialize engine and load config
     mqtt_publisher = None
+    config_file_path = None
     try:
         if args.config:
             print(f"Loading config from: {args.config}")
+            config_file_path = args.config
             if not Path(args.config).exists():
                 print(f"Error: Config file not found: {args.config}")
                 sys.exit(1)
@@ -233,6 +261,33 @@ Note: Register audio first using:
     else:
         print(f"Found {song_count} registered fingerprints in database")
 
+    # Publish system status to MQTT if enabled
+    if mqtt_publisher:
+        # Publish "on" status
+        mqtt_publisher.publish_running_status("on")
+
+        # Collect system details
+        from dejavu import fingerprint
+        system_details = {
+            "version": get_version(),
+            "python_version": platform.python_version(),
+            "platform": sys.platform,
+            "hostname": socket.gethostname(),
+            "device_name": device.name,
+            "sample_rate": fingerprint.DEFAULT_FS,
+            "database_type": args.db_type if not args.config else engine.db_type.value if hasattr(engine, 'db_type') else "unknown",
+            "fingerprints_count": song_count,
+            "config_file": config_file_path,
+            "confidence_threshold": confidence_threshold,
+            "window_duration": window_duration,
+            "energy_threshold_db": args.energy_threshold,
+            "debounce_duration": debounce_duration,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # Publish system details
+        mqtt_publisher.publish_system_details(system_details)
+
     # Start listening with fingerprinting
     try:
         start_listening(
@@ -247,8 +302,9 @@ Note: Register audio first using:
             mqtt_publisher=mqtt_publisher
         )
     finally:
-        # Disconnect MQTT on exit
+        # Publish "off" status and disconnect MQTT on exit
         if mqtt_publisher:
+            mqtt_publisher.publish_running_status("off")
             mqtt_publisher.disconnect()
 
 

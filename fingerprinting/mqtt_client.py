@@ -114,6 +114,75 @@ class MQTTPublisher:
         self.client.loop_stop()
         self.client.disconnect()
 
+    def publish_system_details(self, details: Dict[str, Any]) -> bool:
+        """Publish system details to MQTT.
+
+        Args:
+            details: System details dictionary.
+
+        Returns:
+            True if publish successful, False otherwise.
+        """
+        if not self.connected:
+            self.logger.warning("Not connected to MQTT broker, skipping system details publish")
+            return False
+
+        try:
+            topic = f"{self.topic_prefix}/system/details"
+            payload_json = json.dumps(details, ensure_ascii=False)
+
+            result = self.client.publish(
+                topic=topic,
+                payload=payload_json,
+                qos=self.qos,
+                retain=False
+            )
+
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.info(f"Published system details to {topic}")
+                return True
+            else:
+                self.logger.error(f"Failed to publish system details to {topic}: {result.rc}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Error publishing system details: {e}")
+            return False
+
+    def publish_running_status(self, status: str) -> bool:
+        """Publish running status to MQTT.
+
+        Args:
+            status: Status string ("on" or "off").
+
+        Returns:
+            True if publish successful, False otherwise.
+        """
+        if not self.connected:
+            self.logger.warning("Not connected to MQTT broker, skipping running status publish")
+            return False
+
+        try:
+            topic = f"{self.topic_prefix}/system/running"
+
+            result = self.client.publish(
+                topic=topic,
+                payload=status,
+                qos=self.qos,
+                retain=True  # Retain so status survives broker restarts
+            )
+
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.info(f"Published running status to {topic}: {status}")
+                return True
+            else:
+                self.logger.error(f"Failed to publish running status to {topic}: {result.rc}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Error publishing running status: {e}")
+            return False
+
     def publish_event(self, event: Dict[str, Any]) -> bool:
         """Publish audio recognition event to MQTT.
 
