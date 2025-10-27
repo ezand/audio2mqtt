@@ -280,7 +280,7 @@ Note: Register audio first using:
             "python_version": platform.python_version(),
             "platform": sys.platform,
             "hostname": socket.gethostname(),
-            "device_name": device.name,
+            "audio_device_name": device.name,
             "sample_rate": fingerprint.DEFAULT_FS,
             "database_type": database_type,
             "fingerprints_count": song_count,
