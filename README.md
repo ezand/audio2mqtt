@@ -59,6 +59,7 @@ python listen.py --config dev-config.yaml
 
 Detailed documentation:
 
+- **[Audio Utilities](docs/audio_utils.md)** - Batch convert audio to optimal format (44.1kHz mono WAV)
 - **[Fingerprinting Guide](docs/fingerprinting.md)** - Complete guide (YAML metadata, fingerprint generation, database import, recognition)
 - **[MQTT Integration](docs/mqtt.md)** - Publish detection events to MQTT broker
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input

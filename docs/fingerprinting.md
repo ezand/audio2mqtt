@@ -51,10 +51,13 @@ See `patches/pydejavu_python3.patch` for the full diff.
 
 The fingerprinting workflow uses **YAML metadata files** for flexible metadata and **JSON fingerprint files** for version control:
 
-1. **Create YAML metadata** for each audio file (game, song, custom fields)
-2. **Generate fingerprint JSON files** from YAML + audio (version-controlled)
-3. **Import JSON files** into database (repeatable, any database)
-4. **Recognize with metadata** - results include all metadata fields
+⚠️ **CRITICAL**: Audio files must be converted to optimal format (44.1kHz mono WAV) **BEFORE** fingerprint generation. `generate_fingerprint_files.py` does **NOT** automatically convert audio. See [Audio Utilities](audio_utils.md) for conversion tools.
+
+1. **Convert audio to optimal format** (44.1kHz mono WAV) - **REQUIRED FIRST STEP**
+2. **Create YAML metadata** for each audio file (game, song, custom fields)
+3. **Generate fingerprint JSON files** from YAML + audio (version-controlled)
+4. **Import JSON files** into database (repeatable, any database)
+5. **Recognize with metadata** - results include all metadata fields
 
 ### Database Setup
 
@@ -131,10 +134,15 @@ The `metadata` section is flexible - add any fields relevant to your use case.
 
 ## Generate Fingerprint Files
 
+⚠️ **IMPORTANT**: Before running this step, ensure all audio files are converted to optimal format (44.1kHz mono WAV). This script does **NOT** automatically convert audio. Use `audio_utils.py convert` first. See [Audio Utilities](audio_utils.md).
+
 Generate version-controlled fingerprint JSON files from YAML metadata + audio:
 
 ```bash
-# Generate from directory of YAMLs
+# First, convert audio to optimal format (REQUIRED)
+python audio_utils.py convert source_sounds/ --recursive --overwrite
+
+# Then generate fingerprints
 python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
 # Generate from single YAML
@@ -143,10 +151,16 @@ python generate_fingerprint_files.py source_sounds/song.yaml training/fingerprin
 
 **What this does:**
 - Parses YAML metadata
-- Loads corresponding audio file
+- Loads corresponding audio file **at its native sample rate** (does NOT convert)
 - Generates fingerprints using temporary in-memory Dejavu
 - Extracts hashes and combines with metadata
 - Saves to JSON in `training/fingerprints/`
+
+**Why audio conversion is required:**
+- Audio at 16kHz → ~36 fingerprints (insufficient for matching)
+- Audio at 44.1kHz → ~500+ fingerprints (excellent matching)
+- This script uses whatever sample rate your audio file has
+- Low sample rate = poor recognition accuracy
 
 **Output JSON format:**
 ```json
