@@ -379,7 +379,7 @@ python listen.py --config dev-config.yaml --verbose
 
 ### Registration Process
 
-1. **Load audio file** - Read WAV file (auto-converts non-WAV formats)
+1. **Load audio file** - Read various formats (MP3, WAV, M4A, etc.) via pydub/ffmpeg at native sample rate
 2. **FFT analysis** - Compute spectrogram (frequency vs time)
 3. **Peak detection** - Find spectral peaks (local maxima in frequency domain)
 4. **Hash generation** - Create hashes from peak constellation patterns
@@ -400,7 +400,7 @@ python listen.py --config dev-config.yaml --verbose
 ### Architecture
 
 ```
-Audio Input (16kHz mono)
+Audio Input (native sample rate)
     ↓
 Ring Buffer (sliding window)
     ↓
