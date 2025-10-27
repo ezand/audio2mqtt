@@ -12,6 +12,9 @@ Records audio in real-time (system audio via loopback or microphone), recognizes
 
 ### Fingerprinting with Metadata (Recommended)
 ```bash
+# 0. REQUIRED: Convert audio to optimal format first (44.1kHz mono WAV)
+python audio_utils.py convert source_sounds/ --recursive --overwrite
+
 # 1. Generate fingerprint files from YAML metadata + audio (version-controlled)
 python generate_fingerprint_files.py source_sounds/ training/fingerprints/
 
@@ -242,6 +245,31 @@ elif isinstance(row[0], bytes):
 self.db_type_str = db_config.get('database_type', 'memory')
 ```
 This bug prevented the `song_metadata` table from being created, resulting in empty metadata in MQTT payloads.
+
+### Dejavu Audio Loading Behavior (Critical)
+**How Dejavu loads audio:**
+- Uses `pydub` (ffmpeg backend) via `decoder.py:read()`
+- Reads any format ffmpeg supports (MP3, WAV, M4A, OGG, etc.)
+- Extracts audio at **native sample rate** - does NOT resample
+- Passes native sample rate to `fingerprint.fingerprint(channel, Fs=native_rate)`
+- `DEFAULT_FS = 44100` is just a default parameter, gets overridden by file's actual sample rate
+
+**Why this matters:**
+- 16kHz audio → Nyquist limit at 8kHz → sparse frequency content → only ~36 fingerprints
+- 44.1kHz audio → Nyquist limit at 22kHz → rich frequency content → ~500+ fingerprints
+- Low sample rate = insufficient fingerprints for reliable matching
+- **Solution**: Use `audio_utils.py convert` to convert all audio to 44.1kHz mono WAV BEFORE fingerprint generation
+
+**Workflow requirement:**
+```bash
+# 1. REQUIRED: Convert to optimal format first
+python audio_utils.py convert source_sounds/ --recursive --overwrite
+
+# 2. Then generate fingerprints
+python generate_fingerprint_files.py source_sounds/ training/fingerprints/
+```
+
+`generate_fingerprint_files.py` does NOT auto-convert - it uses whatever sample rate the file has.
 
 ## Method Details
 
