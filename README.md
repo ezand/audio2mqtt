@@ -1,5 +1,6 @@
 ![Banner](docs/assets/audio2mqtt_banner.png)
 
+[![Test](https://github.com/ezand/audio2mqtt/actions/workflows/test.yml/badge.svg)](https://github.com/ezand/audio2mqtt/actions/workflows/test.yml)
 [![GitHub License](https://img.shields.io/github/license/ezand/launchbox2mqtt)](https://choosealicense.com/licenses/mit/)
 ![GitHub top language](https://img.shields.io/github/languages/top/ezand/audio2mqtt)
 
