@@ -1,12 +1,19 @@
 """Shared pytest fixtures for audio2mqtt tests."""
 
+import sys
 import tempfile
 from pathlib import Path
 from typing import Dict
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 import wave
+
+
+# Mock soundcard module BEFORE any imports to avoid PulseAudio errors in CI
+if 'soundcard' not in sys.modules:
+    sys.modules['soundcard'] = MagicMock()
 
 
 @pytest.fixture
