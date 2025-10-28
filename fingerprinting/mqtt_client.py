@@ -206,11 +206,11 @@ class MQTTPublisher:
             return False
 
         try:
-            # Extract song name for topic
+            # Extract song name for payload
             song_name = event.get('song_name', 'unknown')
 
-            # Construct topic: audio2mqtt/event/{song_name}
-            topic = f"{self.topic_prefix}/event/{song_name}"
+            # Construct topic: audio2mqtt/event (single topic for all events)
+            topic = f"{self.topic_prefix}/event"
 
             # Prepare payload with all event data
             payload = {
@@ -236,6 +236,19 @@ class MQTTPublisher:
 
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 self.logger.debug(f"Published event to {topic}: {song_name} ({payload['confidence']:.2f})")
+
+                # Also publish song name to last_song topic
+                metadata = event.get('metadata', {})
+                last_song_name = metadata.get('song', song_name)
+                last_song_topic = f"{self.topic_prefix}/event/last_song"
+
+                self.client.publish(
+                    topic=last_song_topic,
+                    payload=last_song_name,
+                    qos=self.qos,
+                    retain=True  # Retain so last song survives broker restarts
+                )
+
                 return True
             else:
                 self.logger.error(f"Failed to publish to {topic}: {result.rc}")
