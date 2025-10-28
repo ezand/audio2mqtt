@@ -149,7 +149,7 @@ def load_full_config(config_path: str) -> Dict:
         return yaml.safe_load(f)
 
 
-def load_config_from_file(config_path: str) -> Dict:
+def load_config_from_file(config_path: str) -> Optional[Dict]:
     """Load database configuration from YAML file.
 
     Expected format:
@@ -166,10 +166,13 @@ def load_config_from_file(config_path: str) -> Dict:
         config_path: Path to YAML config file.
 
     Returns:
-        Dejavu configuration dictionary.
+        Dejavu configuration dictionary, or None if file not found.
     """
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        return None
 
     # Extract fingerprint config
     fingerprint_config = config.get('fingerprint', {})

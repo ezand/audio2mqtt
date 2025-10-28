@@ -66,6 +66,7 @@ Detailed documentation:
 - **[Fingerprinting Guide](docs/fingerprinting.md)** - Complete guide (YAML metadata, fingerprint generation, database import, recognition)
 - **[MQTT Integration](docs/mqtt.md)** - Publish detection events to MQTT broker
 - **[Audio Device Setup](docs/setup.md)** - Configure system audio loopback and microphone input
+- **[Testing](docs/testing.md)** - Test suite, running tests, CI/CD with GitHub Actions
 
 ## Real-time Listening
 

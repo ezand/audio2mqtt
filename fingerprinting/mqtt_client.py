@@ -192,6 +192,39 @@ class MQTTPublisher:
             self.logger.error(f"Error publishing running status: {e}")
             return False
 
+    def publish_version(self, version: str) -> bool:
+        """Publish version to MQTT.
+
+        Args:
+            version: Version string to publish.
+
+        Returns:
+            True if publish successful, False otherwise.
+        """
+        if not self.connected:
+            self.logger.warning("Not connected to MQTT broker, skipping publish")
+            return False
+
+        try:
+            topic = f"{self.topic_prefix}/system/version"
+            result = self.client.publish(
+                topic=topic,
+                payload=version,
+                qos=self.qos,
+                retain=True
+            )
+
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.info(f"Published version to {topic}: {version}")
+                return True
+            else:
+                self.logger.error(f"Failed to publish version to {topic}: {result.rc}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Error publishing version: {e}")
+            return False
+
     def publish_event(self, event: Dict[str, Any]) -> bool:
         """Publish audio recognition event to MQTT.
 
